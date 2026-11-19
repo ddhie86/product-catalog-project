@@ -1,33 +1,34 @@
 # Product Catalog — Frontend (React)
 
-React 18 + Vite + Tailwind CSS, struktur **feature-based** sesuai TDD bagian 3.3.
-Data fetching memakai **TanStack Query** (opsi React Query di TDD); state yang tersisa
-hanya autentikasi admin (Context), jadi Redux Toolkit tidak diperlukan.
+React 18, Vite, and Tailwind CSS with the **feature-based** structure described in
+section 3.3 of the technical requirements. Data fetching uses **TanStack Query**
+(the proposal's React Query option). Admin authentication is managed with
+Context, so Redux Toolkit is not needed.
 
-## Menjalankan
+## Run locally
 
 ```bash
 cd frontend
 npm install
-npm run dev        # http://localhost:5173  (proxy /api -> http://localhost:8080)
+npm run dev        # http://localhost:5173 (proxies /api to http://localhost:8080)
 npm test
 npm run build
 ```
 
-Backend harus berjalan di `:8080` (lihat README di root). Untuk production, set
-`VITE_API_BASE_URL` ke URL API.
+The backend must be running on port `8080` (see the root README). For production,
+set `VITE_API_BASE_URL` to the API URL.
 
-## Struktur
+## Structure
 
-```
+```text
 src/
   assets/
-  components/            # Button, FormFields, Modal, Pagination, StatusBadge, layout, ProtectedRoute
-  lib/                   # format (Rupiah, tanggal), konstanta
-  services/apiClient.js  # axios + interceptor (JWT, error 401, normalisasi error)
-  routes/index.jsx       # semua route (halaman admin di-lazy-load)
+  components/            # Button, fields, modal, pagination, status badge, layouts, protected route
+  lib/                   # Currency/date formatting and constants
+  services/apiClient.js  # Axios client and interceptors (JWT, 401 handling, error normalization)
+  routes/index.jsx       # Application routes (admin pages are lazy-loaded)
   modules/
-    auth/                # login admin + AuthContext            (tambahan di luar TDD)
+    auth/                # Admin login and AuthContext (additional to the proposal)
     catalog/             # CatalogPage, ProductCard, ProductDetailPage
     checkout/            # CheckoutPage, PaymentRedirect, PaymentSuccessPage
     admin-products/      # AdminProductList, ProductFormModal
@@ -35,25 +36,26 @@ src/
     transactions/        # TransactionListPage
 ```
 
-## Route
+## Routes
 
-| Path | Halaman |
+| Path | Page |
 | --- | --- |
-| `/` | Katalog (filter di URL: `q`, `category`, `sort`, `page`) |
-| `/products/:id` | Detail produk |
-| `/checkout?product=:id&qty=:n` | Form checkout |
-| `/payment/redirect` | Instruksi + pengalihan ke payment gateway |
-| `/payment/success` | Tujuan `success_redirect_url` gateway |
-| `/admin/login` | Login admin |
-| `/admin`, `/admin/products`, `/admin/transactions` | Panel admin (butuh login) |
+| `/` | Product catalog (URL filters: `q`, `category`, `sort`, `page`) |
+| `/products/:id` | Product details |
+| `/checkout?product=:id&qty=:n` | Checkout form |
+| `/payment/redirect` | Payment instructions and gateway redirect |
+| `/payment/success` | Gateway `success_redirect_url` destination |
+| `/admin/login` | Admin login |
+| `/admin`, `/admin/products`, `/admin/transactions` | Protected admin panel |
 
-## Catatan desain
+## Design notes
 
-- Font Plus Jakarta Sans (paket `@fontsource`, tanpa CDN). Warna ada di `tailwind.config.js`:
-  biru tua = merek, amber = perlu perhatian (pending, stok menipis).
-- Status transaksi selalu memakai label teks, tidak hanya warna.
-- Token JWT disimpan di `localStorage` (mudah, tapi rentan XSS). Untuk hardening,
-  pindah ke httpOnly cookie dari backend.
-- `PaymentRedirect` hanya mengarahkan ke URL `https` (atau `http://localhost`).
-- Checkout saat ini 1 produk per pesanan ("Beli sekarang"), sesuai TDD dan skema API yang
-  sudah menerima `items[]`; keranjang bisa ditambah tanpa perubahan backend.
+- Plus Jakarta Sans is bundled with `@fontsource` (no CDN). Colors are defined in
+  `tailwind.config.js`: dark blue is the brand color, and amber indicates attention
+  (pending payments or low stock).
+- Transaction statuses always include text labels, not just colors.
+- The JWT is stored in `localStorage`, which is convenient but vulnerable to XSS.
+  For stronger protection, use an `httpOnly` cookie issued by the backend.
+- `PaymentRedirect` only allows `https` URLs (or `http://localhost`).
+- Checkout currently supports one product per order ("Buy now"). The API already
+  accepts `items[]`, so a cart can be added without backend changes.

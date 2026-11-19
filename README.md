@@ -1,46 +1,46 @@
 # Product Catalog — Backend (Go)
 
-Modular Monolith + Clean Architecture (lightweight DDD) sesuai dokumen
-*Proposal Detail Proyek: Platform E-Commerce Product Catalog Modular*.
+A Modular Monolith with Clean Architecture (lightweight DDD), aligned with the
+*Detailed Project Proposal: Modular E-Commerce Product Catalog Platform*.
 
-## Struktur
+## Structure
 
-```
+```text
 cmd/
-  api/main.go            # entry point + dependency injection wiring
-  seed/main.go           # buat admin awal
+  api/main.go            # Entry point and dependency-injection wiring
+  seed/main.go           # Creates the initial admin account
 internal/
-  config/                # env config
-  platform/              # adapter infrastruktur (database, payment/xendit, mailer/smtp)
+  config/                # Environment configuration
+  platform/              # Infrastructure adapters (database, Xendit, SMTP)
   modules/
-    auth/                # login admin (JWT)
-    product/             # CMS produk (admin) + katalog publik + ProductServiceContract
-    transaction/         # checkout, webhook, daftar transaksi, laporan
-    payment/             # kontrak Gateway (domain saja)
-    notification/        # worker email async (goroutine + channel)
-      └─ tiap modul: delivery/http · domain · repository · usecase
-frontend/                # React + Vite (lihat frontend/README.md)
-pkg/                     # apperror, response, middleware, token(JWT), logger
-migrations/              # SQL (golang-migrate)
+    auth/                # Admin authentication (JWT)
+    product/             # Admin product CMS, public catalog, ProductServiceContract
+    transaction/         # Checkout, webhooks, transaction list, reports
+    payment/             # Payment gateway contract (domain only)
+    notification/        # Async email worker (goroutine and channel)
+      └─ Each module: delivery/http · domain · repository · usecase
+frontend/                # React + Vite (see frontend/README.md)
+pkg/                     # Shared errors, responses, middleware, JWT, logging
+migrations/              # SQL migrations (golang-migrate)
 ```
 
-Aturan dependensi: `delivery → usecase → domain ← repository`. Modul **transaction**
-hanya mengakses produk lewat `product/domain.ProductServiceContract`, tidak pernah
-menyentuh repository/tabel produk secara langsung.
+Dependency rule: `delivery → usecase → domain ← repository`. The **transaction**
+module accesses products only through `product/domain.ProductServiceContract`; it
+does not directly access the product repository or tables.
 
-## Menjalankan
+## Run locally
 
 ```bash
-cp .env.example .env            # isi JWT_SECRET, SEED_ADMIN_PASSWORD, dan XENDIT_* sebelum dipakai
-make up                         # Postgres + Mailpit
-make tidy                       # generate go.sum
-make migrate-up                 # brew install golang-migrate
-make seed                       # admin: SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
+cp .env.example .env            # Set JWT_SECRET, SEED_ADMIN_PASSWORD, and XENDIT_* before use
+make up                         # Start PostgreSQL and Mailpit
+make tidy                       # Update Go module dependencies and go.sum
+make migrate-up                 # Requires the golang-migrate CLI
+make seed                       # Admin credentials: SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
 make run                        # http://localhost:8080/healthz
 make test
 ```
 
-## Endpoint
+## API endpoints
 
 | Method | Path | Auth |
 | --- | --- | --- |
@@ -48,26 +48,31 @@ make test
 | GET/POST | `/api/v1/admin/products` | JWT |
 | PUT/DELETE | `/api/v1/admin/products/:id` | JWT |
 | GET | `/api/v1/admin/transactions` (`?status=`) | JWT |
-| GET | `/api/v1/admin/transactions/:id` *(tambahan)* | JWT |
+| GET | `/api/v1/admin/transactions/:id` *(additional)* | JWT |
 | GET | `/api/v1/admin/reports/summary` | JWT |
 | GET | `/api/v1/products` (`q, category, sort, page, limit`) | – |
 | GET | `/api/v1/products/:id` | – |
-| GET | `/api/v1/categories` *(tambahan, dipakai frontend)* | – |
+| GET | `/api/v1/categories` *(additional; used by the frontend)* | – |
 | POST | `/api/v1/checkout` | – |
-| POST | `/api/v1/payments/webhook` (`X-Callback-Token`) | token gateway |
+| POST | `/api/v1/payments/webhook` (`X-Callback-Token`) | Gateway token |
 
-`sort`: `newest` (default) · `price_asc` · `price_desc` · `popular`.
+`sort` options: `newest` (default), `price_asc`, `price_desc`, and `popular`.
 
-## Keputusan desain di luar dokumen (mohon dikonfirmasi)
+## Design decisions beyond the proposal
 
-1. **Skema DB** — ERD 3.5 belum memuat `sku`, `category_id`, `deleted_at` (dipakai di 6.1)
-   maupun `customer_phone`/`shipping_address` (form checkout 2.2.B). Semuanya ditambahkan
-   di migrasi, plus tabel `categories`.
-2. **`GET /admin/transactions/:id`** ditambahkan karena requirement "Detail Transaksi"
-   belum punya endpoint.
-3. **Router: Gin** (dokumen membolehkan Gin atau Echo).
-4. **Gateway: Xendit** (dokumen membolehkan Midtrans/Xendit) di balik interface `Gateway`.
-5. **Reservasi stok**: stok dikurangi saat checkout, dikembalikan bila gagal bayar/`EXPIRED`.
-6. **Webhook idempoten** lewat `UpdateStatusIf(PENDING → target)`.
-7. **Sort `popular`** masih fallback ke `newest` (butuh data penjualan; lihat TODO di repository).
-8. **Email**: antrian penuh → event di-drop & di-log (tidak memblokir webhook). Belum ada outbox/persisten.
+1. **Database schema** — The ERD in section 3.5 omits `sku`, `category_id`, and
+   `deleted_at` (used in section 6.1), as well as `customer_phone` and
+   `shipping_address` (required by the checkout form in section 2.2.B). These
+   fields and a `categories` table are included in the migration.
+2. **`GET /admin/transactions/:id`** — Added because the transaction-detail
+   requirement did not specify an endpoint.
+3. **Router: Gin** — The proposal allows either Gin or Echo.
+4. **Gateway: Xendit** — The proposal allows either Midtrans or Xendit; the
+   integration is behind a `Gateway` interface.
+5. **Stock reservation** — Stock is deducted at checkout and restored if payment
+   creation fails or the payment expires.
+6. **Idempotent webhooks** — Status changes use `UpdateStatusIf(PENDING → target)`.
+7. **Popular sort** — Currently falls back to `newest`; sales data is needed to
+   implement popularity sorting (see the repository TODO).
+8. **Email delivery** — If the queue is full, the event is dropped and logged so
+   the webhook is not blocked. There is no persistent outbox yet.
