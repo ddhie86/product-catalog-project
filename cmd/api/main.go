@@ -56,7 +56,7 @@ func run() error {
 	defer stop()
 
 	// ---- Infrastructure ----
-	pool, err := database.NewPostgres(ctx, cfg.DatabaseURL)
+	pool, err := database.NewPostgres(ctx, cfg.Database)
 	if err != nil {
 		return err
 	}

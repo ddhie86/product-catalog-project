@@ -2,9 +2,9 @@
 export
 
 APP     := product-catalog
-DB_URL  ?= $(DATABASE_URL)
+DB_URL  = postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
 
-.PHONY: run build test cover fmt vet tidy migrate-up migrate-down seed up down
+.PHONY: run build test cover fmt vet tidy check-db-config migrate-up migrate-down seed up down
 
 run:            ## Jalankan API
 	go run ./cmd/api
@@ -27,17 +27,22 @@ vet:
 tidy:
 	go mod tidy
 
-# Butuh CLI golang-migrate: brew install golang-migrate
-migrate-up:
+# Requires the golang-migrate CLI: brew install golang-migrate
+check-db-config:
+	@test -n "$(DB_HOST)" -a -n "$(DB_PORT)" -a -n "$(DB_NAME)" -a \
+		-n "$(DB_USER)" -a -n "$(DB_PASSWORD)" -a -n "$(DB_SSLMODE)" || \
+		(echo "Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, and DB_SSLMODE in .env"; exit 1)
+
+migrate-up: check-db-config
 	migrate -path migrations -database "$(DB_URL)" up
 
-migrate-down:
+migrate-down: check-db-config
 	migrate -path migrations -database "$(DB_URL)" down 1
 
-seed:           ## Buat admin awal dari SEED_ADMIN_*
+seed:           ## Create the initial admin from SEED_ADMIN_*
 	go run ./cmd/seed
 
-up:             ## Postgres + Mailpit (SMTP dev)
+up:             ## Start PostgreSQL and Mailpit for local development
 	docker compose up -d
 
 down:

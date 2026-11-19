@@ -31,7 +31,7 @@ does not directly access the product repository or tables.
 ## Run locally
 
 ```bash
-cp .env.example .env            # Set JWT_SECRET, SEED_ADMIN_PASSWORD, and XENDIT_* before use
+cp .env.example .env            # Set DB_PASSWORD, JWT_SECRET, SEED_ADMIN_PASSWORD, and XENDIT_* before use
 make up                         # Start PostgreSQL and Mailpit
 make tidy                       # Update Go module dependencies and go.sum
 make migrate-up                 # Requires the golang-migrate CLI
@@ -76,3 +76,18 @@ make test
    implement popularity sorting (see the repository TODO).
 8. **Email delivery** — If the queue is full, the event is dropped and logged so
    the webhook is not blocked. There is no persistent outbox yet.
+
+## Database security
+
+- Database settings are supplied as separate `DB_HOST`, `DB_PORT`, `DB_NAME`,
+  `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE`, and optional `DB_SSLROOTCERT`
+  environment variables. The committed `.env.example` contains no database
+  password; `.env` is ignored by Git.
+- Generate a local password with `openssl rand -hex 32`. Docker Compose maps the
+  PostgreSQL port to `127.0.0.1` only and requires the database settings.
+- `DB_SSLMODE=disable` is intended only for local development. Production
+  configuration rejects non-TLS modes. Prefer `verify-full`, setting
+  `DB_SSLROOTCERT` to the provider's CA certificate when needed. `require` is
+  accepted when certificate verification is unavailable.
+- Store production credentials in your deployment secret manager, not in source
+  control or container images.

@@ -3,15 +3,21 @@ package database
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/dedysetiawan/product-catalog-project/internal/config"
 )
 
-func NewPostgres(ctx context.Context, url string) (*pgxpool.Pool, error) {
-	cfg, err := pgxpool.ParseConfig(url)
+func NewPostgres(ctx context.Context, db config.DatabaseConfig) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(connectionURL(db))
 	if err != nil {
-		return nil, fmt.Errorf("parse database url: %w", err)
+		return nil, fmt.Errorf("parse database configuration: %w", err)
 	}
 	cfg.MaxConns = 20
 	cfg.MaxConnIdleTime = 5 * time.Minute
@@ -27,4 +33,20 @@ func NewPostgres(ctx context.Context, url string) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 	return pool, nil
+}
+
+func connectionURL(db config.DatabaseConfig) string {
+	query := url.Values{}
+	query.Set("sslmode", strings.ToLower(db.SSLMode))
+	if db.SSLRootCert != "" {
+		query.Set("sslrootcert", db.SSLRootCert)
+	}
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(db.User, db.Password),
+		Host:     net.JoinHostPort(db.Host, strconv.Itoa(db.Port)),
+		Path:     "/" + db.Name,
+		RawQuery: query.Encode(),
+	}
+	return u.String()
 }
