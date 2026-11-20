@@ -75,8 +75,10 @@ func run() error {
 
 	// ---- Auth module ----
 	userRepo := authrepo.NewPostgresUserRepository(pool)
+	roleRepo := authrepo.NewPostgresRoleRepository(pool)
 	authHandler := authhttp.NewAuthHandler(authuc.NewAuthUsecase(userRepo, tokens))
-	adminUserHandler := authhttp.NewAdminUserHandler(authuc.NewAdminUserUsecase(userRepo))
+	adminUserHandler := authhttp.NewAdminUserHandler(authuc.NewAdminUserUsecase(userRepo), roleRepo)
+	roleHandler := authhttp.NewRoleHandler(authuc.NewRoleUsecase(roleRepo))
 
 	// ---- Product module ----
 	productRepo := productrepo.NewPostgresProductRepository(pool)
@@ -115,10 +117,11 @@ func run() error {
 	admin := v1.Group("/admin")
 	authHandler.RegisterRoutes(admin) // POST /admin/login
 	protected := admin.Group("", middleware.JWTAuth(tokens, userRepo))
-	adminUserHandler.RegisterAdminRoutes(protected)
-	categoryHandler.RegisterAdminRoutes(protected)
-	productHandler.RegisterAdminRoutes(protected)
-	reportHandler.RegisterAdminRoutes(protected)
+	adminUserHandler.RegisterAdminRoutes(protected, roleRepo)
+	roleHandler.RegisterAdminRoutes(protected, roleRepo)
+	categoryHandler.RegisterAdminRoutes(protected, roleRepo)
+	productHandler.RegisterAdminRoutes(protected, roleRepo)
+	reportHandler.RegisterAdminRoutes(protected, roleRepo)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

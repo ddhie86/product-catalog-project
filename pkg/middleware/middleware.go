@@ -25,6 +25,10 @@ type AdminUserVerifier interface {
 	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
+type PermissionChecker interface {
+	HasPermission(ctx context.Context, userID uuid.UUID, permission string) (bool, error)
+}
+
 // JWTAuth memvalidasi header "Authorization: Bearer <token>".
 func JWTAuth(tm *token.Manager, users AdminUserVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -55,6 +59,36 @@ func JWTAuth(tm *token.Manager, users AdminUserVerifier) gin.HandlerFunc {
 		c.Set(CtxUserID, claims.UserID)
 		c.Set(CtxEmail, claims.Email)
 		c.Next()
+	}
+}
+
+func RequirePermission(checker PermissionChecker, permission string) gin.HandlerFunc {
+	return requireAnyPermission(checker, permission)
+}
+
+func RequireAnyPermission(checker PermissionChecker, permissions ...string) gin.HandlerFunc {
+	return requireAnyPermission(checker, permissions...)
+}
+
+func requireAnyPermission(checker PermissionChecker, permissions ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, err := uuid.Parse(c.GetString(CtxUserID))
+		if err != nil {
+			response.Error(c, apperror.Unauthorized("invalid admin identity"))
+			return
+		}
+		for _, permission := range permissions {
+			allowed, err := checker.HasPermission(c.Request.Context(), userID, permission)
+			if err != nil {
+				response.Error(c, apperror.Internal(err))
+				return
+			}
+			if allowed {
+				c.Next()
+				return
+			}
+		}
+		response.Error(c, apperror.Forbidden("insufficient permission"))
 	}
 }
 

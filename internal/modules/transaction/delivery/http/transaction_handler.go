@@ -10,6 +10,7 @@ import (
 	product "github.com/dedysetiawan/product-catalog-project/internal/modules/product/domain"
 	"github.com/dedysetiawan/product-catalog-project/internal/modules/transaction/domain"
 	"github.com/dedysetiawan/product-catalog-project/pkg/apperror"
+	"github.com/dedysetiawan/product-catalog-project/pkg/middleware"
 	"github.com/dedysetiawan/product-catalog-project/pkg/response"
 )
 
@@ -20,10 +21,10 @@ func NewTransactionHandler(uc domain.ReportUsecase) *TransactionHandler {
 }
 
 // RegisterAdminRoutes: rg harus sudah dipasangi middleware JWT.
-func (h *TransactionHandler) RegisterAdminRoutes(rg *gin.RouterGroup) {
-	rg.GET("/transactions", h.List)
-	rg.GET("/transactions/:id", h.Detail)
-	rg.GET("/reports/summary", h.Summary)
+func (h *TransactionHandler) RegisterAdminRoutes(rg *gin.RouterGroup, permissions middleware.PermissionChecker) {
+	rg.GET("/transactions", middleware.RequirePermission(permissions, "transactions:view"), h.List)
+	rg.GET("/transactions/:id", middleware.RequirePermission(permissions, "transactions:view"), h.Detail)
+	rg.GET("/reports/summary", middleware.RequirePermission(permissions, "dashboard:view"), h.Summary)
 }
 
 func (h *TransactionHandler) List(c *gin.Context) {

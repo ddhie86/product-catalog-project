@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { vi } from 'vitest';
 import { AuthProvider } from '@/modules/auth/AuthContext.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
+
+vi.mock('@/modules/auth/services/authApi', () => ({
+  login: vi.fn(),
+  getCurrentPermissions: vi.fn().mockResolvedValue(['dashboard:view']),
+}));
 
 function renderAt(path) {
   return render(
@@ -28,5 +34,5 @@ it('mengalihkan ke login bila belum masuk', () => {
 it('menampilkan halaman admin bila token ada', () => {
   localStorage.setItem('pc_admin_token', 'token-uji');
   renderAt('/admin');
-  expect(screen.getByText('Isi admin')).toBeInTheDocument();
+  return screen.findByText('Isi admin');
 });

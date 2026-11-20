@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/google/uuid"
@@ -20,6 +21,7 @@ func NewPostgresUserRepository(db *pgxpool.Pool) *PostgresUserRepository {
 }
 
 var _ domain.UserRepository = (*PostgresUserRepository)(nil)
+var _ domain.AdminUserRepository = (*PostgresUserRepository)(nil)
 
 func (r *PostgresUserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var u domain.User
@@ -39,9 +41,49 @@ func (r *PostgresUserRepository) Create(ctx context.Context, u *domain.User) err
 	return uniqueEmailError(err)
 }
 
+func (r *PostgresUserRepository) CreateAdmin(ctx context.Context, u *domain.User, roleIDs []uuid.UUID) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(ctx,
+		`INSERT INTO users (id, email, password_hash) VALUES ($1,$2,$3) RETURNING created_at, updated_at`,
+		u.ID, u.Email, u.PasswordHash).Scan(&u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		return uniqueEmailError(err)
+	}
+	if len(roleIDs) == 0 {
+		tag, err := tx.Exec(ctx, `
+			INSERT INTO user_roles (user_id, role_id)
+			SELECT $1, id FROM roles WHERE is_default=TRUE`, u.ID)
+		if err != nil {
+			return roleAssignmentError(err)
+		}
+		if tag.RowsAffected() == 0 {
+			return apperror.Internal(errors.New("default role is missing"))
+		}
+	} else if err := replaceUserRoles(ctx, tx, u.ID, roleIDs); err != nil {
+		return roleAssignmentError(err)
+	}
+	u.Roles, err = loadUserRoles(ctx, tx, u.ID)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
 func (r *PostgresUserRepository) ListAdmins(ctx context.Context) ([]domain.User, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, email, created_at, updated_at FROM users ORDER BY created_at, email`)
+		`SELECT u.id, u.email, u.created_at, u.updated_at,
+			COALESCE(jsonb_agg(jsonb_build_object('id', r.id, 'name', r.name) ORDER BY r.name)
+				FILTER (WHERE r.id IS NOT NULL), '[]'::jsonb)::text
+		FROM users u
+		LEFT JOIN user_roles ur ON ur.user_id=u.id
+		LEFT JOIN roles r ON r.id=ur.role_id
+		GROUP BY u.id
+		ORDER BY u.created_at, u.email`)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +92,11 @@ func (r *PostgresUserRepository) ListAdmins(ctx context.Context) ([]domain.User,
 	users := make([]domain.User, 0)
 	for rows.Next() {
 		var u domain.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		var rolesJSON string
+		if err := rows.Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt, &rolesJSON); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(rolesJSON), &u.Roles); err != nil {
 			return nil, err
 		}
 		users = append(users, u)
@@ -58,20 +104,50 @@ func (r *PostgresUserRepository) ListAdmins(ctx context.Context) ([]domain.User,
 	return users, rows.Err()
 }
 
-func (r *PostgresUserRepository) UpdateAdmin(ctx context.Context, u *domain.User) (*domain.User, error) {
+func (r *PostgresUserRepository) UpdateAdmin(ctx context.Context, u *domain.User, roleIDs []uuid.UUID) (*domain.User, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `LOCK TABLE users, user_roles IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return nil, err
+	}
 	const q = `UPDATE users
 		SET email=$2,
 			password_hash=CASE WHEN $3 = '' THEN password_hash ELSE $3 END,
 			updated_at=now()
 		WHERE id=$1
 		RETURNING id, email, created_at, updated_at`
-	err := r.db.QueryRow(ctx, q, u.ID, u.Email, u.PasswordHash).
+	err = tx.QueryRow(ctx, q, u.ID, u.Email, u.PasswordHash).
 		Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperror.NotFound("admin not found")
 	}
 	if err != nil {
 		return nil, uniqueEmailError(err)
+	}
+	if roleIDs != nil {
+		if err := replaceUserRoles(ctx, tx, u.ID, roleIDs); err != nil {
+			return nil, roleAssignmentError(err)
+		}
+	}
+	var superAdminCount int
+	if err := tx.QueryRow(ctx, `
+		SELECT COUNT(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id
+		WHERE r.is_system=TRUE`).Scan(&superAdminCount); err != nil {
+		return nil, err
+	}
+	if superAdminCount == 0 {
+		return nil, apperror.Conflict("at least one super admin must remain")
+	}
+	u.Roles, err = loadUserRoles(ctx, tx, u.ID)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 	return u, nil
 }
@@ -83,7 +159,7 @@ func (r *PostgresUserRepository) DeleteAdmin(ctx context.Context, id uuid.UUID) 
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx, `LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+	if _, err := tx.Exec(ctx, `LOCK TABLE users, user_roles IN SHARE ROW EXCLUSIVE MODE`); err != nil {
 		return err
 	}
 	var exists bool
@@ -101,6 +177,26 @@ func (r *PostgresUserRepository) DeleteAdmin(ctx context.Context, id uuid.UUID) 
 		return apperror.Conflict("cannot delete the last admin")
 	}
 
+	var hasSuperAdminRole bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id
+			WHERE ur.user_id=$1 AND r.is_system=TRUE
+		)`, id).Scan(&hasSuperAdminRole); err != nil {
+		return err
+	}
+	if hasSuperAdminRole {
+		var superAdminCount int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id
+			WHERE r.is_system=TRUE`).Scan(&superAdminCount); err != nil {
+			return err
+		}
+		if superAdminCount <= 1 {
+			return apperror.Conflict("cannot delete the last super admin")
+		}
+	}
+
 	tag, err := tx.Exec(ctx, `DELETE FROM users WHERE id=$1`, id)
 	if err != nil {
 		return err
@@ -109,6 +205,46 @@ func (r *PostgresUserRepository) DeleteAdmin(ctx context.Context, id uuid.UUID) 
 		return apperror.NotFound("admin not found")
 	}
 	return tx.Commit(ctx)
+}
+
+func replaceUserRoles(ctx context.Context, tx pgx.Tx, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	if len(roleIDs) == 0 {
+		return apperror.BadRequest("at least one role must be assigned")
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM user_roles WHERE user_id=$1`, userID); err != nil {
+		return err
+	}
+	for _, roleID := range roleIDs {
+		if _, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)`, userID, roleID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func loadUserRoles(ctx context.Context, tx pgx.Tx, userID uuid.UUID) ([]domain.Role, error) {
+	rows, err := tx.Query(ctx, `SELECT r.id, r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=$1 ORDER BY r.name`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	roles := make([]domain.Role, 0)
+	for rows.Next() {
+		var role domain.Role
+		if err := rows.Scan(&role.ID, &role.Name); err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, rows.Err()
+}
+
+func roleAssignmentError(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+		return apperror.BadRequest("one or more roles do not exist")
+	}
+	return err
 }
 
 func (r *PostgresUserRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {

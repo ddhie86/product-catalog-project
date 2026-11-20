@@ -37,6 +37,17 @@ func (r *fakeAdminUserRepository) Create(_ context.Context, user *domain.User) e
 	return nil
 }
 
+func (r *fakeAdminUserRepository) CreateAdmin(ctx context.Context, user *domain.User, roleIDs []uuid.UUID) error {
+	if err := r.Create(ctx, user); err != nil {
+		return err
+	}
+	user.Roles = make([]domain.Role, len(roleIDs))
+	for i, id := range roleIDs {
+		user.Roles[i].ID = id
+	}
+	return nil
+}
+
 func (r *fakeAdminUserRepository) ListAdmins(context.Context) ([]domain.User, error) {
 	users := make([]domain.User, 0, len(r.users))
 	for _, user := range r.users {
@@ -45,7 +56,7 @@ func (r *fakeAdminUserRepository) ListAdmins(context.Context) ([]domain.User, er
 	return users, nil
 }
 
-func (r *fakeAdminUserRepository) UpdateAdmin(_ context.Context, user *domain.User) (*domain.User, error) {
+func (r *fakeAdminUserRepository) UpdateAdmin(_ context.Context, user *domain.User, roleIDs []uuid.UUID) (*domain.User, error) {
 	existing, ok := r.users[user.ID]
 	if !ok {
 		return nil, apperror.NotFound("admin not found")
@@ -58,6 +69,12 @@ func (r *fakeAdminUserRepository) UpdateAdmin(_ context.Context, user *domain.Us
 	existing.Email = user.Email
 	if user.PasswordHash != "" {
 		existing.PasswordHash = user.PasswordHash
+	}
+	if roleIDs != nil {
+		existing.Roles = make([]domain.Role, len(roleIDs))
+		for i, id := range roleIDs {
+			existing.Roles[i].ID = id
+		}
 	}
 	existing.UpdatedAt = time.Now()
 	return existing, nil
@@ -79,7 +96,7 @@ func TestCreateAdmin_NormalizesEmailAndHashesPassword(t *testing.T) {
 	uc := usecase.NewAdminUserUsecase(repo)
 
 	user, err := uc.CreateAdmin(context.Background(), domain.CreateAdminRequest{
-		Email: "  ADMIN@example.com ", Password: "strong-admin-password",
+		Email: "  ADMIN@example.com ", Password: "strong-admin-password", RoleIDs: []uuid.UUID{uuid.New()},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -103,7 +120,7 @@ func TestUpdateAdmin_LeavesPasswordUnchangedWhenOmitted(t *testing.T) {
 	uc := usecase.NewAdminUserUsecase(repo)
 
 	user, err := uc.UpdateAdmin(context.Background(), id, domain.UpdateAdminRequest{
-		Email: "updated@example.com",
+		Email: "updated@example.com", RoleIDs: []uuid.UUID{uuid.New()},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

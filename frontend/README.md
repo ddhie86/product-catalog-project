@@ -23,15 +23,18 @@ set `VITE_API_BASE_URL` to the API URL.
 ```text
 src/
   assets/
-  components/            # Button, fields, modal, pagination, status badge, layouts, protected route
+  components/            # Button, fields, modal, pagination, layouts, permission guards
   lib/                   # Currency/date formatting and constants
   services/apiClient.js  # Axios client and interceptors (JWT, 401 handling, error normalization)
   routes/index.jsx       # Application routes (admin pages are lazy-loaded)
   modules/
-    auth/                # Admin login and AuthContext (additional to the proposal)
+    auth/                # Admin login, current permissions and AuthContext
     catalog/             # CatalogPage, ProductCard, ProductDetailPage
     checkout/            # CheckoutPage, PaymentRedirect, PaymentSuccessPage
     admin-products/      # AdminProductList, ProductFormModal
+    admin-categories/    # Category CRUD
+    admin-users/         # Admin account CRUD and role assignment
+    admin-roles/         # Role CRUD and permission matrix
     admin-dashboard/     # DashboardPage
     transactions/        # TransactionListPage
 ```
@@ -46,7 +49,15 @@ src/
 | `/payment/redirect` | Payment instructions and gateway redirect |
 | `/payment/success` | Gateway `success_redirect_url` destination |
 | `/admin/login` | Admin login |
-| `/admin`, `/admin/products`, `/admin/transactions` | Protected admin panel |
+| `/admin` | Protected dashboard or first menu available to the signed-in role |
+| `/admin/products`, `/admin/categories` | Product and category management |
+| `/admin/users`, `/admin/roles` | Admin accounts, role assignment, and permission management |
+| `/admin/transactions` | Transaction list and details |
+
+Admin navigation and create/edit/delete controls are shown according to the
+current role's permissions. The backend independently enforces the same
+permissions for each protected API action. Super Admins can configure custom
+roles from **Role dan permission** and assign them from **Pengguna admin**.
 
 ## Design notes
 

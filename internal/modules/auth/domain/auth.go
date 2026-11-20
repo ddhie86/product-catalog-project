@@ -12,6 +12,7 @@ type User struct {
 	ID           uuid.UUID `json:"id"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
+	Roles        []Role    `json:"roles"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -27,13 +28,15 @@ type LoginResponse struct {
 }
 
 type CreateAdminRequest struct {
-	Email    string `json:"email" binding:"required,email,max=255"`
-	Password string `json:"password" binding:"required,min=12,max=72"`
+	Email    string      `json:"email" binding:"required,email,max=255"`
+	Password string      `json:"password" binding:"required,min=12,max=72"`
+	RoleIDs  []uuid.UUID `json:"role_ids"`
 }
 
 type UpdateAdminRequest struct {
-	Email    string `json:"email" binding:"required,email,max=255"`
-	Password string `json:"password" binding:"omitempty,min=12,max=72"`
+	Email    string      `json:"email" binding:"required,email,max=255"`
+	Password string      `json:"password" binding:"omitempty,min=12,max=72"`
+	RoleIDs  []uuid.UUID `json:"role_ids"`
 }
 
 type UserRepository interface {
@@ -43,8 +46,9 @@ type UserRepository interface {
 
 type AdminUserRepository interface {
 	Create(ctx context.Context, u *User) error
+	CreateAdmin(ctx context.Context, u *User, roleIDs []uuid.UUID) error
 	ListAdmins(ctx context.Context) ([]User, error)
-	UpdateAdmin(ctx context.Context, u *User) (*User, error)
+	UpdateAdmin(ctx context.Context, u *User, roleIDs []uuid.UUID) (*User, error)
 	DeleteAdmin(ctx context.Context, id uuid.UUID) error
 }
 

@@ -34,13 +34,19 @@ func (v activeAdminVerifier) Exists(_ context.Context, id uuid.UUID) (bool, erro
 	return v[id], nil
 }
 
+type allowAllPermissions struct{}
+
+func (allowAllPermissions) HasPermission(context.Context, uuid.UUID, string) (bool, error) {
+	return true, nil
+}
+
 func TestAdminCategoryRoutesRequireJWT(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	manager := token.NewManager("test-secret-with-more-than-16-characters", time.Hour)
 	adminID := uuid.New()
 	router := gin.New()
 	admin := router.Group("/api/v1/admin", middleware.JWTAuth(manager, activeAdminVerifier{adminID: true}))
-	NewCategoryHandler(fakeCategoryUsecase{}).RegisterAdminRoutes(admin)
+	NewCategoryHandler(fakeCategoryUsecase{}).RegisterAdminRoutes(admin, allowAllPermissions{})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/categories", nil)
 	recorder := httptest.NewRecorder()

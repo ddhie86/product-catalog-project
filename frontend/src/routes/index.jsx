@@ -1,10 +1,12 @@
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 import ConsumerLayout from '@/components/ConsumerLayout.jsx';
 import AdminLayout from '@/components/AdminLayout.jsx';
 import ProtectedRoute from '@/components/ProtectedRoute.jsx';
+import RequirePermission from '@/components/RequirePermission.jsx';
 import { LoadingState } from '@/components/States.jsx';
+import { useAuth } from '@/modules/auth/AuthContext.jsx';
 
 import CatalogPage from '@/modules/catalog/CatalogPage.jsx';
 import ProductDetailPage from '@/modules/catalog/ProductDetailPage.jsx';
@@ -16,7 +18,32 @@ import LoginPage from '@/modules/auth/pages/LoginPage.jsx';
 // Halaman admin dipisah ke chunk sendiri; konsumen tidak ikut mengunduhnya.
 const DashboardPage = lazy(() => import('@/modules/admin-dashboard/DashboardPage.jsx'));
 const AdminProductList = lazy(() => import('@/modules/admin-products/AdminProductList.jsx'));
+const AdminCategoryList = lazy(() => import('@/modules/admin-categories/AdminCategoryList.jsx'));
+const AdminUserList = lazy(() => import('@/modules/admin-users/AdminUserList.jsx'));
+const AdminRoleList = lazy(() => import('@/modules/admin-roles/AdminRoleList.jsx'));
 const TransactionListPage = lazy(() => import('@/modules/transactions/TransactionListPage.jsx'));
+
+function AdminHome() {
+  const { hasPermission } = useAuth();
+  if (hasPermission('dashboard:view')) return <DashboardPage />;
+  const firstAllowed = [
+    ['products:view', '/admin/products'],
+    ['categories:view', '/admin/categories'],
+    ['transactions:view', '/admin/transactions'],
+    ['users:view', '/admin/users'],
+    ['roles:view', '/admin/roles'],
+  ].find(([permission]) => hasPermission(permission));
+  return <Navigate to={firstAllowed?.[1] ?? '/admin/no-access'} replace />;
+}
+
+function NoAccessPage() {
+  return (
+    <div className="rounded-lg border border-line bg-white p-8 text-center">
+      <h1 className="text-xl font-semibold">Akses tidak tersedia</h1>
+      <p className="mt-2 text-sm text-ink-soft">Role akun Anda belum memiliki izin untuk membuka menu ini.</p>
+    </div>
+  );
+}
 
 function NotFound() {
   return <p className="py-16 text-center text-ink-soft">Halaman tidak ditemukan.</p>;
@@ -39,9 +66,13 @@ export default function AppRoutes() {
         <Route path="admin/login" element={<LoginPage />} />
         <Route path="admin" element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="products" element={<AdminProductList />} />
-            <Route path="transactions" element={<TransactionListPage />} />
+            <Route index element={<AdminHome />} />
+            <Route path="no-access" element={<NoAccessPage />} />
+            <Route path="products" element={<RequirePermission permission="products:view"><AdminProductList /></RequirePermission>} />
+            <Route path="categories" element={<RequirePermission permission="categories:view"><AdminCategoryList /></RequirePermission>} />
+            <Route path="users" element={<RequirePermission permission="users:view"><AdminUserList /></RequirePermission>} />
+            <Route path="roles" element={<RequirePermission permission="roles:view"><AdminRoleList /></RequirePermission>} />
+            <Route path="transactions" element={<RequirePermission permission="transactions:view"><TransactionListPage /></RequirePermission>} />
           </Route>
         </Route>
 

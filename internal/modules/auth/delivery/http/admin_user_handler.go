@@ -11,19 +11,20 @@ import (
 )
 
 type AdminUserHandler struct {
-	uc domain.AdminUserUsecase
+	uc          domain.AdminUserUsecase
+	permissions middleware.PermissionChecker
 }
 
-func NewAdminUserHandler(uc domain.AdminUserUsecase) *AdminUserHandler {
-	return &AdminUserHandler{uc: uc}
+func NewAdminUserHandler(uc domain.AdminUserUsecase, permissions middleware.PermissionChecker) *AdminUserHandler {
+	return &AdminUserHandler{uc: uc, permissions: permissions}
 }
 
 // RegisterAdminRoutes must be called with a JWT-protected route group.
-func (h *AdminUserHandler) RegisterAdminRoutes(rg *gin.RouterGroup) {
-	rg.GET("/users", h.List)
-	rg.POST("/users", h.Create)
-	rg.PUT("/users/:id", h.Update)
-	rg.DELETE("/users/:id", h.Delete)
+func (h *AdminUserHandler) RegisterAdminRoutes(rg *gin.RouterGroup, permissions middleware.PermissionChecker) {
+	rg.GET("/users", middleware.RequirePermission(permissions, "users:view"), h.List)
+	rg.POST("/users", middleware.RequirePermission(permissions, "users:create"), h.Create)
+	rg.PUT("/users/:id", middleware.RequirePermission(permissions, "users:edit"), h.Update)
+	rg.DELETE("/users/:id", middleware.RequirePermission(permissions, "users:delete"), h.Delete)
 }
 
 func (h *AdminUserHandler) List(c *gin.Context) {
@@ -39,6 +40,9 @@ func (h *AdminUserHandler) Create(c *gin.Context) {
 	var req domain.CreateAdminRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, apperror.BadRequest(err.Error()))
+		return
+	}
+	if req.RoleIDs != nil && !h.requireRoleAssignmentPermission(c) {
 		return
 	}
 	user, err := h.uc.CreateAdmin(c.Request.Context(), req)
@@ -58,6 +62,9 @@ func (h *AdminUserHandler) Update(c *gin.Context) {
 	var req domain.UpdateAdminRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, apperror.BadRequest(err.Error()))
+		return
+	}
+	if req.RoleIDs != nil && !h.requireRoleAssignmentPermission(c) {
 		return
 	}
 	user, err := h.uc.UpdateAdmin(c.Request.Context(), id, req)
@@ -84,4 +91,22 @@ func (h *AdminUserHandler) Delete(c *gin.Context) {
 		return
 	}
 	response.NoContent(c)
+}
+
+func (h *AdminUserHandler) requireRoleAssignmentPermission(c *gin.Context) bool {
+	userID, err := uuid.Parse(c.GetString(middleware.CtxUserID))
+	if err != nil {
+		response.Error(c, apperror.Unauthorized("invalid admin identity"))
+		return false
+	}
+	allowed, err := h.permissions.HasPermission(c.Request.Context(), userID, "users:assign_roles")
+	if err != nil {
+		response.Error(c, apperror.Internal(err))
+		return false
+	}
+	if !allowed {
+		response.Error(c, apperror.Forbidden("assigning admin roles requires users:assign_roles"))
+		return false
+	}
+	return true
 }

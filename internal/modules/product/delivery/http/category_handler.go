@@ -6,6 +6,7 @@ import (
 
 	"github.com/dedysetiawan/product-catalog-project/internal/modules/product/domain"
 	"github.com/dedysetiawan/product-catalog-project/pkg/apperror"
+	"github.com/dedysetiawan/product-catalog-project/pkg/middleware"
 	"github.com/dedysetiawan/product-catalog-project/pkg/response"
 )
 
@@ -18,12 +19,12 @@ func NewCategoryHandler(uc domain.CategoryUsecase) *CategoryHandler {
 }
 
 // RegisterAdminRoutes must be called with a JWT-protected route group.
-func (h *CategoryHandler) RegisterAdminRoutes(rg *gin.RouterGroup) {
+func (h *CategoryHandler) RegisterAdminRoutes(rg *gin.RouterGroup, permissions middleware.PermissionChecker) {
 	categories := rg.Group("/categories")
-	categories.GET("", h.List)
-	categories.POST("", h.Create)
-	categories.PUT("/:id", h.Update)
-	categories.DELETE("/:id", h.Delete)
+	categories.GET("", middleware.RequirePermission(permissions, "categories:view"), h.List)
+	categories.POST("", middleware.RequirePermission(permissions, "categories:create"), h.Create)
+	categories.PUT("/:id", middleware.RequirePermission(permissions, "categories:edit"), h.Update)
+	categories.DELETE("/:id", middleware.RequirePermission(permissions, "categories:delete"), h.Delete)
 }
 
 func (h *CategoryHandler) List(c *gin.Context) {

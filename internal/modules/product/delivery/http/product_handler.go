@@ -9,6 +9,7 @@ import (
 
 	"github.com/dedysetiawan/product-catalog-project/internal/modules/product/domain"
 	"github.com/dedysetiawan/product-catalog-project/pkg/apperror"
+	"github.com/dedysetiawan/product-catalog-project/pkg/middleware"
 	"github.com/dedysetiawan/product-catalog-project/pkg/response"
 )
 
@@ -19,12 +20,12 @@ type ProductHandler struct {
 func NewProductHandler(uc domain.ProductUsecase) *ProductHandler { return &ProductHandler{uc: uc} }
 
 // RegisterAdminRoutes: rg harus sudah dipasangi middleware JWT.
-func (h *ProductHandler) RegisterAdminRoutes(rg *gin.RouterGroup) {
+func (h *ProductHandler) RegisterAdminRoutes(rg *gin.RouterGroup, permissions middleware.PermissionChecker) {
 	g := rg.Group("/products")
-	g.GET("", h.List)
-	g.POST("", h.Create)
-	g.PUT("/:id", h.Update)
-	g.DELETE("/:id", h.Delete)
+	g.GET("", middleware.RequirePermission(permissions, "products:view"), h.List)
+	g.POST("", middleware.RequirePermission(permissions, "products:create"), h.Create)
+	g.PUT("/:id", middleware.RequirePermission(permissions, "products:edit"), h.Update)
+	g.DELETE("/:id", middleware.RequirePermission(permissions, "products:delete"), h.Delete)
 }
 
 func (h *ProductHandler) List(c *gin.Context) {

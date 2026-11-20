@@ -19,6 +19,12 @@ func (f fakeAdminUserVerifier) Exists(_ context.Context, id uuid.UUID) (bool, er
 	return f[id], nil
 }
 
+type fakePermissionChecker map[string]bool
+
+func (f fakePermissionChecker) HasPermission(_ context.Context, _ uuid.UUID, permission string) (bool, error) {
+	return f[permission], nil
+}
+
 func TestJWTAuthRequiresActiveAdmin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	manager := token.NewManager("test-secret-with-more-than-16-characters", time.Hour)
@@ -58,5 +64,27 @@ func TestJWTAuthRequiresActiveAdmin(t *testing.T) {
 				t.Fatalf("status = %d, want %d", recorder.Code, tt.wantStatus)
 			}
 		})
+	}
+}
+
+func TestRequirePermissionBlocksUnauthorizedAction(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	manager := token.NewManager("test-secret-with-more-than-16-characters", time.Hour)
+	adminID := uuid.New()
+	jwt, _, err := manager.Generate(adminID.String(), "admin@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	router := gin.New()
+	router.POST("/admin/products", JWTAuth(manager, fakeAdminUserVerifier{adminID: true}),
+		RequirePermission(fakePermissionChecker{"products:view": true}, "products:create"),
+		func(c *gin.Context) { c.Status(http.StatusNoContent) })
+	req := httptest.NewRequest(http.MethodPost, "/admin/products", nil)
+	req.Header.Set("Authorization", "Bearer "+jwt)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusForbidden)
 	}
 }

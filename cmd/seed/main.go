@@ -36,10 +36,13 @@ func main() {
 	defer pool.Close()
 
 	users := repository.NewPostgresUserRepository(pool)
-	if _, err := users.FindByEmail(ctx, email); err == nil {
+	roles := repository.NewPostgresRoleRepository(pool)
+	_, err = users.FindByEmail(ctx, email)
+	if err == nil {
 		log.Printf("admin already exists: %s", email)
 		return
-	} else if apperror.Code(err) != "NOT_FOUND" {
+	}
+	if apperror.Code(err) != "NOT_FOUND" {
 		log.Fatal(err)
 	}
 
@@ -47,8 +50,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	roleList, err := roles.ListRoles(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var superAdminRoleID uuid.UUID
+	for _, role := range roleList {
+		if role.Name == "Super Admin" && role.IsSystem {
+			superAdminRoleID = role.ID
+			break
+		}
+	}
+	if superAdminRoleID == uuid.Nil {
+		log.Fatal("Super Admin role is missing; run migrations before seeding")
+	}
 	u := &domain.User{ID: uuid.New(), Email: email, PasswordHash: string(hash)}
-	if err := users.Create(ctx, u); err != nil {
+	if err := users.CreateAdmin(ctx, u, []uuid.UUID{superAdminRoleID}); err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("admin created: %s", email)

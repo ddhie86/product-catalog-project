@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/modules/auth/AuthContext.jsx';
 import { deleteProduct, getAdminProducts } from './services/adminProductApi';
 import ProductFormModal from './ProductFormModal.jsx';
 import { Button } from '@/components/Button.jsx';
@@ -11,6 +12,7 @@ import { LOW_STOCK_THRESHOLD } from '@/lib/constants';
 import { formatRupiah } from '@/lib/format';
 
 export default function AdminProductList() {
+  const { hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
@@ -39,7 +41,11 @@ export default function AdminProductList() {
 
   return (
     <>
-      <PageHeader title="Produk" description="Kelola katalog yang tampil di toko." actions={<Button onClick={() => openForm()}>Tambah produk</Button>} />
+      <PageHeader
+        title="Produk"
+        description="Kelola katalog yang tampil di toko."
+        actions={hasPermission('products:create') && <Button onClick={() => openForm()}>Tambah produk</Button>}
+      />
 
       <form
         role="search"
@@ -69,7 +75,11 @@ export default function AdminProductList() {
       {list.isPending && <LoadingState label="Memuat produk" />}
       {list.isError && <ErrorState error={list.error} onRetry={list.refetch} />}
       {list.isSuccess && items.length === 0 && (
-        <EmptyState title="Belum ada produk" description="Tambahkan produk pertama agar tampil di katalog." action={<Button onClick={() => openForm()}>Tambah produk</Button>} />
+        <EmptyState
+          title="Belum ada produk"
+          description="Tambahkan produk pertama agar tampil di katalog."
+          action={hasPermission('products:create') && <Button onClick={() => openForm()}>Tambah produk</Button>}
+        />
       )}
 
       {items.length > 0 && (
@@ -94,12 +104,16 @@ export default function AdminProductList() {
                   <td className={`px-4 py-3 text-right ${p.stock < LOW_STOCK_THRESHOLD ? 'font-semibold text-signal' : ''}`}>{p.stock}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => openForm(p)} aria-label={`Ubah ${p.name}`}>
-                        Ubah
-                      </Button>
-                      <Button variant="danger" onClick={() => setToDelete(p)} aria-label={`Hapus ${p.name}`}>
-                        Hapus
-                      </Button>
+                      {hasPermission('products:edit') && (
+                        <Button variant="secondary" onClick={() => openForm(p)} aria-label={`Ubah ${p.name}`}>
+                          Ubah
+                        </Button>
+                      )}
+                      {hasPermission('products:delete') && (
+                        <Button variant="danger" onClick={() => setToDelete(p)} aria-label={`Hapus ${p.name}`}>
+                          Hapus
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
