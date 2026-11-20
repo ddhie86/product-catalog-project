@@ -27,6 +27,7 @@ func NewPostgresProductRepository(db *pgxpool.Pool) *PostgresProductRepository {
 }
 
 var _ domain.ProductRepository = (*PostgresProductRepository)(nil)
+var _ domain.CategoryRepository = (*PostgresProductRepository)(nil)
 
 func scanProduct(row pgx.Row) (*domain.Product, error) {
 	var p domain.Product
@@ -170,6 +171,48 @@ func (r *PostgresProductRepository) ListCategories(ctx context.Context) ([]domai
 		items = append(items, c)
 	}
 	return items, rows.Err()
+}
+
+func (r *PostgresProductRepository) CreateCategory(ctx context.Context, category *domain.Category) error {
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO categories (id, name) VALUES ($1, $2) RETURNING id, name`,
+		category.ID, category.Name,
+	).Scan(&category.ID, &category.Name)
+	return categoryConflict(err)
+}
+
+func (r *PostgresProductRepository) UpdateCategory(ctx context.Context, category *domain.Category) error {
+	err := r.db.QueryRow(ctx,
+		`UPDATE categories SET name=$2 WHERE id=$1 RETURNING id, name`,
+		category.ID, category.Name,
+	).Scan(&category.ID, &category.Name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperror.NotFound("category not found")
+	}
+	return categoryConflict(err)
+}
+
+func (r *PostgresProductRepository) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM categories WHERE id=$1`, id)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return apperror.Conflict("category is assigned to one or more products")
+		}
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperror.NotFound("category not found")
+	}
+	return nil
+}
+
+func categoryConflict(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return apperror.Conflict("category name already exists")
+	}
+	return err
 }
 
 func (r *PostgresProductRepository) DeductStock(ctx context.Context, id uuid.UUID, qty int) error {

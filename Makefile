@@ -4,7 +4,7 @@ export
 APP     := product-catalog
 DB_URL  = postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
 
-.PHONY: run build test cover fmt vet tidy check-db-config migrate-up migrate-down seed up down
+.PHONY: run build test cover fmt vet tidy check-db-config migrate-up migrate-down seed bootstrap up down
 
 run:            ## Jalankan API
 	go run ./cmd/api
@@ -41,6 +41,10 @@ migrate-down: check-db-config
 
 seed:           ## Create the initial admin from SEED_ADMIN_*
 	go run ./cmd/seed
+
+bootstrap:      ## Apply migrations and create the initial admin
+	$(MAKE) migrate-up
+	$(MAKE) seed
 
 up:             ## Start PostgreSQL and Mailpit for local development
 	docker compose up -d

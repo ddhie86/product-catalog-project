@@ -2,12 +2,14 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/dedysetiawan/product-catalog-project/pkg/apperror"
 	"github.com/dedysetiawan/product-catalog-project/pkg/response"
@@ -19,8 +21,12 @@ const (
 	CtxEmail  = "user_email"
 )
 
+type AdminUserVerifier interface {
+	Exists(ctx context.Context, id uuid.UUID) (bool, error)
+}
+
 // JWTAuth memvalidasi header "Authorization: Bearer <token>".
-func JWTAuth(tm *token.Manager) gin.HandlerFunc {
+func JWTAuth(tm *token.Manager, users AdminUserVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		raw, found := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
 		if !found || raw == "" {
@@ -29,6 +35,20 @@ func JWTAuth(tm *token.Manager) gin.HandlerFunc {
 		}
 		claims, err := tm.Parse(raw)
 		if err != nil {
+			response.Error(c, apperror.Unauthorized("invalid or expired token"))
+			return
+		}
+		userID, err := uuid.Parse(claims.UserID)
+		if err != nil {
+			response.Error(c, apperror.Unauthorized("invalid or expired token"))
+			return
+		}
+		exists, err := users.Exists(c.Request.Context(), userID)
+		if err != nil {
+			response.Error(c, apperror.Internal(err))
+			return
+		}
+		if !exists {
 			response.Error(c, apperror.Unauthorized("invalid or expired token"))
 			return
 		}

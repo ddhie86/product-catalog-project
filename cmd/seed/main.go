@@ -14,6 +14,7 @@ import (
 	"github.com/dedysetiawan/product-catalog-project/internal/modules/auth/domain"
 	"github.com/dedysetiawan/product-catalog-project/internal/modules/auth/repository"
 	"github.com/dedysetiawan/product-catalog-project/internal/platform/database"
+	"github.com/dedysetiawan/product-catalog-project/pkg/apperror"
 )
 
 func main() {
@@ -21,10 +22,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	email := strings.ToLower(os.Getenv("SEED_ADMIN_EMAIL"))
+	email := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_ADMIN_EMAIL")))
 	pass := os.Getenv("SEED_ADMIN_PASSWORD")
-	if email == "" || len(pass) < 8 {
-		log.Fatal("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD (min 8 chars) are required")
+	if email == "" || strings.TrimSpace(pass) == "" || len(pass) < 12 || len(pass) > 72 {
+		log.Fatal("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD (12-72 bytes) are required")
 	}
 
 	ctx := context.Background()
@@ -34,12 +35,20 @@ func main() {
 	}
 	defer pool.Close()
 
+	users := repository.NewPostgresUserRepository(pool)
+	if _, err := users.FindByEmail(ctx, email); err == nil {
+		log.Printf("admin already exists: %s", email)
+		return
+	} else if apperror.Code(err) != "NOT_FOUND" {
+		log.Fatal(err)
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatal(err)
 	}
 	u := &domain.User{ID: uuid.New(), Email: email, PasswordHash: string(hash)}
-	if err := repository.NewPostgresUserRepository(pool).Create(ctx, u); err != nil {
+	if err := users.Create(ctx, u); err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("admin created: %s", email)

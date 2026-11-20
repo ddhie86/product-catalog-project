@@ -23,7 +23,7 @@ type Product struct {
 
 type Category struct {
 	ID   uuid.UUID `json:"id"`
-	Name string `json:"name"`
+	Name string    `json:"name"`
 }
 
 // Sort options untuk katalog publik.
@@ -69,6 +69,14 @@ type UpdateProductRequest struct {
 	ImageURL    string     `json:"image_url" binding:"omitempty,max=512"`
 }
 
+type CreateCategoryRequest struct {
+	Name string `json:"name" binding:"required,max=255"`
+}
+
+type UpdateCategoryRequest struct {
+	Name string `json:"name" binding:"required,max=255"`
+}
+
 // ---- Contracts ----
 
 // ProductRepository: akses data produk (diimplementasi di layer repository).
@@ -103,6 +111,20 @@ type CatalogUsecase interface {
 	FetchCatalog(ctx context.Context, f CatalogFilter) ([]Product, int, error)
 	GetProductDetail(ctx context.Context, id uuid.UUID) (*Product, error)
 	ListCategories(ctx context.Context) ([]Category, error)
+}
+
+type CategoryRepository interface {
+	ListCategories(ctx context.Context) ([]Category, error)
+	CreateCategory(ctx context.Context, category *Category) error
+	UpdateCategory(ctx context.Context, category *Category) error
+	DeleteCategory(ctx context.Context, id uuid.UUID) error
+}
+
+type CategoryUsecase interface {
+	ListCategories(ctx context.Context) ([]Category, error)
+	CreateCategory(ctx context.Context, req CreateCategoryRequest) (*Category, error)
+	UpdateCategory(ctx context.Context, id uuid.UUID, req UpdateCategoryRequest) (*Category, error)
+	DeleteCategory(ctx context.Context, id uuid.UUID) error
 }
 
 // ProductServiceContract adalah satu-satunya pintu modul lain (mis. transaction)

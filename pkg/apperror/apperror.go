@@ -30,6 +30,7 @@ func NotFound(msg string) *Error     { return New("NOT_FOUND", msg, http.StatusN
 func Conflict(msg string) *Error     { return New("CONFLICT", msg, http.StatusConflict) }
 func BadRequest(msg string) *Error   { return New("BAD_REQUEST", msg, http.StatusBadRequest) }
 func Unauthorized(msg string) *Error { return New("UNAUTHORIZED", msg, http.StatusUnauthorized) }
+func Forbidden(msg string) *Error    { return New("FORBIDDEN", msg, http.StatusForbidden) }
 func InsufficientStock(msg string) *Error {
 	return New("INSUFFICIENT_STOCK", msg, http.StatusUnprocessableEntity)
 }

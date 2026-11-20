@@ -74,12 +74,15 @@ func run() error {
 	go func() { defer wg.Done(); worker.Run() }()
 
 	// ---- Auth module ----
-	authHandler := authhttp.NewAuthHandler(authuc.NewAuthUsecase(authrepo.NewPostgresUserRepository(pool), tokens))
+	userRepo := authrepo.NewPostgresUserRepository(pool)
+	authHandler := authhttp.NewAuthHandler(authuc.NewAuthUsecase(userRepo, tokens))
+	adminUserHandler := authhttp.NewAdminUserHandler(authuc.NewAdminUserUsecase(userRepo))
 
 	// ---- Product module ----
 	productRepo := productrepo.NewPostgresProductRepository(pool)
 	productHandler := producthttp.NewProductHandler(productuc.NewProductUsecase(productRepo))
 	catalogHandler := producthttp.NewCatalogHandler(productuc.NewCatalogUsecase(productRepo))
+	categoryHandler := producthttp.NewCategoryHandler(productuc.NewCategoryUsecase(productRepo))
 	productService := productuc.NewProductService(productRepo) // kontrak untuk modul lain
 
 	// ---- Transaction module (hanya tahu produk lewat ProductServiceContract) ----
@@ -111,7 +114,9 @@ func run() error {
 
 	admin := v1.Group("/admin")
 	authHandler.RegisterRoutes(admin) // POST /admin/login
-	protected := admin.Group("", middleware.JWTAuth(tokens))
+	protected := admin.Group("", middleware.JWTAuth(tokens, userRepo))
+	adminUserHandler.RegisterAdminRoutes(protected)
+	categoryHandler.RegisterAdminRoutes(protected)
 	productHandler.RegisterAdminRoutes(protected)
 	reportHandler.RegisterAdminRoutes(protected)
 
