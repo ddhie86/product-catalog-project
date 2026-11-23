@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package middleware berisi middleware Gin yang dipakai lintas modul.
 package middleware
 

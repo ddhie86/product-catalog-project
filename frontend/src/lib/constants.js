@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Harus sama dengan LOW_STOCK_THRESHOLD di backend (.env).
 export const LOW_STOCK_THRESHOLD = 5;
 

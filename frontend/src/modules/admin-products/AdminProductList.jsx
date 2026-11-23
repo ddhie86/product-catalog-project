@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/modules/auth/AuthContext.jsx';

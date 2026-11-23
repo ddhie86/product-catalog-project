@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import '@testing-library/jest-dom/vitest';
 
 const values = new Map();

@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 CREATE TABLE IF NOT EXISTS users (
     id            UUID PRIMARY KEY,
     email         VARCHAR(255) NOT NULL UNIQUE,

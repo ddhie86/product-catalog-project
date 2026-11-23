@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package domain (product) berisi entity, DTO, dan kontrak modul Product.
 package domain
 

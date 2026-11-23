@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package config memuat konfigurasi aplikasi dari environment variable.
 package config
 

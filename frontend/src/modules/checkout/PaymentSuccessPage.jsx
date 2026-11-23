@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { Link } from 'react-router-dom';
 
 // Tujuan success_redirect_url dari payment gateway (PAYMENT_SUCCESS_REDIRECT_URL di backend).

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/modules/auth/AuthContext.jsx';
 import { Button } from './Button.jsx';

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package apperror menyediakan error terstruktur yang dipetakan ke HTTP status.
 package apperror
 

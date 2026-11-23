@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package token mengelola penerbitan & verifikasi JWT admin.
 package token
 

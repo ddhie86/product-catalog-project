@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package usecase (product): business logic CMS produk (admin).
 package usecase
 

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import axios from 'axios';
 
 const TOKEN_KEY = 'pc_admin_token';

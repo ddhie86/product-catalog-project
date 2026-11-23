@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package response menyeragamkan bentuk JSON response API.
 package response
 

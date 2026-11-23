@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 const styles = {
   PENDING: { label: 'Menunggu pembayaran', cls: 'bg-signal-tint text-signal' },
   PAID: { label: 'Lunas', cls: 'bg-ok-tint text-ok' },

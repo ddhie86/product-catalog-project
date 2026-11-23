@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { Link, Outlet } from 'react-router-dom';
 
 export default function ConsumerLayout() {

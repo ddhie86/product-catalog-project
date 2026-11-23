@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { render, screen } from '@testing-library/react';
 import { StatusBadge } from './StatusBadge.jsx';
 

@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 CREATE TABLE permissions (
     key        VARCHAR(64) PRIMARY KEY,
     menu       VARCHAR(32) NOT NULL,

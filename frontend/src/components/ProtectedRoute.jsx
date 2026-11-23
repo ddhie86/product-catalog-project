@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/modules/auth/AuthContext.jsx';
 import { ErrorState, LoadingState } from './States.jsx';

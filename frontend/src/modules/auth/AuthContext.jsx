@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AUTH_EXPIRED_EVENT, tokenStorage } from '@/services/apiClient';
 import * as authApi from './services/authApi';

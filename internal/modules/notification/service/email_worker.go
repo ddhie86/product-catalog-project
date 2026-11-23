@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package service (notification): worker email asynchronous (goroutine + channel).
 package service
 

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { useEffect, useId, useRef } from 'react';
 
 export function Modal({ open, title, onClose, children }) {

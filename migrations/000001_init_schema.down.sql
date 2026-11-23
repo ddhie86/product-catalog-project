@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 DROP TABLE IF EXISTS transaction_items;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS products;

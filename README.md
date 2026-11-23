@@ -126,3 +126,9 @@ new accounts receive the default role.
   accepted when certificate verification is unavailable.
 - Store production credentials in your deployment secret manager, not in source
   control or container images.
+
+## Copyright and usage restrictions
+
+Copyright (c) 2026 Dedy Setiawan. All Rights Reserved. This code is published
+solely for portfolio evaluation and may not be used, copied, or redistributed
+without prior written permission.

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package domain (transaction): entity, DTO, dan kontrak modul Transaction.
 package domain
 

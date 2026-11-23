@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 export function PageHeader({ title, description, actions }) {
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">

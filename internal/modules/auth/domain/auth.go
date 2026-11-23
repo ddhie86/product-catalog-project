@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package domain (auth): entity & kontrak autentikasi admin.
 package domain
 

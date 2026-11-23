@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 export default function Spinner({ size = 'md', label = 'Memuat' }) {
   const dim = size === 'sm' ? 'h-4 w-4' : 'h-6 w-6';
   return (

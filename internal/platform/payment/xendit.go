@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package payment: adapter payment gateway (Xendit).
 package payment
 

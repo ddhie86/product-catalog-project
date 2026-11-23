@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { request } from '@/services/apiClient';
 
 export async function getAdminRoles() {

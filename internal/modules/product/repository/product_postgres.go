@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package repository (product): implementasi PostgreSQL untuk ProductRepository.
 package repository
 

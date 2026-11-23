@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package http (product): HTTP handlers & routes modul Product.
 package http
 

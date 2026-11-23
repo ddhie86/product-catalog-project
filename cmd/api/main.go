@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Command api: entry point & dependency injection wiring (Modular Monolith).
 package main
 

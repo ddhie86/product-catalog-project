@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Command seed: membuat akun admin awal dari SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD.
 package main
 

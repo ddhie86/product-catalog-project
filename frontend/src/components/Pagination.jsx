@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { Button } from './Button.jsx';
 
 /** meta: { page, total_pages, total_items } dari backend. */

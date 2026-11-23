@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package domain (payment): kontrak integrasi payment gateway.
 // Implementasi konkret (Xendit/Midtrans) berada di internal/platform/payment.
 package domain

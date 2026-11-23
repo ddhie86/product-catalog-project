@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package http (transaction): HTTP handlers & routes modul Transaction.
 package http
 

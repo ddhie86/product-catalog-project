@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 import { Link } from 'react-router-dom';
 import { formatRupiah } from '@/lib/format';
 import { StockLabel } from './StockLabel.jsx';

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Dedy Setiawan. All rights reserved.
 // Package usecase (transaction): checkout, webhook, dan reporting.
 package usecase
 
