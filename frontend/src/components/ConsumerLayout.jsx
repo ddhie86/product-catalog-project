@@ -26,12 +26,12 @@ export default function ConsumerLayout() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link to="/#catalog" aria-label="Cari produk" className="flex h-10 w-10 items-center justify-center rounded-full border border-line text-ink transition hover:border-brand hover:text-brand">
+            <Link to="/#catalog-search" aria-label="Cari produk" className="flex h-10 w-10 items-center justify-center rounded-full border border-line text-ink transition hover:border-brand hover:text-brand">
               <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.2 4.2" />
               </svg>
             </Link>
-            <Link to="/admin" className="hidden rounded-full bg-brand px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-dark sm:inline-flex">
+            <Link to="/admin" className="inline-flex rounded-full bg-brand px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-dark sm:px-4">
               Admin
             </Link>
           </div>
