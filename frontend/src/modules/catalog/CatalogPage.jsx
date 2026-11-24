@@ -147,7 +147,7 @@ export default function CatalogPage() {
               <span>{products.data?.meta?.total_items ?? items.length} produk ditemukan</span>
               {products.isFetching && <span>Memperbarui...</span>}
             </div>
-            <ul className="flex flex-wrap justify-center gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-9">
+            <ul className="flex flex-wrap justify-start gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-9">
               {items.map((product) => (
                 <li key={product.id} className="w-[calc(50%-6px)] max-w-[280px] xl:w-[calc(25%-15px)]">
                   <ProductCard product={product} />
