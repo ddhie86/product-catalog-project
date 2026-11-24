@@ -82,29 +82,28 @@ export default function CatalogPage() {
 
       {categoryItems.length > 0 && (
         <section id="categories" className="scroll-mt-28">
-          <div className="mb-5 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Jelajahi</p>
-              <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink">Belanja berdasarkan kategori</h2>
-            </div>
-            <button type="button" onClick={() => update({ category: '' })} className="text-sm font-semibold text-brand hover:text-brand-dark">Semua kategori</button>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-ink">Kategori produk</h2>
+            <span className="text-xs text-ink-soft">{categoryItems.length} kategori</span>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {categoryItems.slice(0, 8).map((item, index) => (
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2" aria-label="Filter kategori">
+            <button
+              type="button"
+              onClick={() => update({ category: '' })}
+              aria-pressed={category === ''}
+              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition ${category === '' ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}
+            >
+              Semua
+            </button>
+            {categoryItems.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => update({ category: item.id })}
                 aria-pressed={category === item.id}
-                className={`group flex min-h-24 items-center justify-between rounded-2xl border px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:bg-brand-tint/40 ${category === item.id ? 'border-brand bg-brand-tint' : 'border-line bg-white'}`}
+                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition ${category === item.id ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}
               >
-                <span>
-                  <span className="block text-sm font-semibold text-ink">{item.name}</span>
-                  <span className="mt-1 block text-xs text-ink-soft">Lihat koleksi</span>
-                </span>
-                <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold ${index % 2 === 0 ? 'bg-paper text-brand' : 'bg-brand-tint text-brand-dark'}`}>
-                  {String(item.name || 'P').slice(0, 1).toUpperCase()}
-                </span>
+                {item.name}
               </button>
             ))}
           </div>
@@ -121,15 +120,6 @@ export default function CatalogPage() {
           <div className="w-full sm:w-52">
             <SelectField label="Urutkan produk" value={sort} onChange={(event) => update({ sort: event.target.value })} options={SORT_OPTIONS} />
           </div>
-        </div>
-
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => update({ category: '' })} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${category === '' ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}>Semua produk</button>
-          {categoryItems.slice(0, 5).map((item) => (
-            <button key={item.id} type="button" onClick={() => update({ category: item.id })} aria-pressed={category === item.id} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${category === item.id ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}>
-              {item.name}
-            </button>
-          ))}
         </div>
 
         {products.isPending && <LoadingState label="Memuat produk" />}
