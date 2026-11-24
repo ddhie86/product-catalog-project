@@ -78,9 +78,11 @@ export default function ProductDetailPage() {
                   type="number"
                   min={1}
                   max={Math.max(product.stock, 1)}
+                  step={1}
+                  inputMode="numeric"
                   value={safeQty}
                   disabled={outOfStock}
-                  onChange={(event) => setQty(Number(event.target.value) || 1)}
+                  onChange={(event) => setQty(Math.min(Math.max(1, Number(event.target.value) || 1), Math.max(product.stock, 1)))}
                   className="h-10 w-14 border-x border-line text-center text-sm font-semibold text-ink outline-none disabled:bg-paper"
                 />
                 <button type="button" aria-label="Tambah jumlah" disabled={outOfStock || safeQty >= product.stock} onClick={() => setQty((value) => Math.min(product.stock, value + 1))} className="h-10 w-10 text-lg text-ink-soft transition hover:text-brand disabled:opacity-30">+</button>
