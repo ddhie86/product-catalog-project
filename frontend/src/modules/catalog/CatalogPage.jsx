@@ -126,7 +126,7 @@ export default function CatalogPage() {
         <div className="mb-5 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => update({ category: '' })} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${category === '' ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}>Semua produk</button>
           {categoryItems.slice(0, 5).map((item) => (
-            <button key={item.id} type="button" onClick={() => update({ category: item.id })} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${category === item.id ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}>
+            <button key={item.id} type="button" onClick={() => update({ category: item.id })} aria-pressed={category === item.id} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${category === item.id ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}>
               {item.name}
             </button>
           ))}
@@ -147,7 +147,7 @@ export default function CatalogPage() {
               <span>{products.data?.meta?.total_items ?? items.length} produk ditemukan</span>
               {products.isFetching && <span>Memperbarui...</span>}
             </div>
-            <ul className="grid grid-cols-2 justify-start gap-x-3 gap-y-8 sm:grid-cols-[repeat(auto-fill,minmax(220px,280px))] sm:gap-x-5 sm:gap-y-9">
+            <ul className="grid grid-cols-2 justify-center gap-x-3 gap-y-8 sm:grid-cols-[repeat(auto-fill,minmax(220px,280px))] sm:gap-x-5 sm:gap-y-9">
               {items.map((product) => <li key={product.id}><ProductCard product={product} /></li>)}
             </ul>
           </>
