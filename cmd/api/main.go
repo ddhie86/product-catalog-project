@@ -16,6 +16,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/dedysetiawan/product-catalog-project/internal/config"
+	activityhttp "github.com/dedysetiawan/product-catalog-project/internal/modules/activity/delivery/http"
+	activitymiddleware "github.com/dedysetiawan/product-catalog-project/internal/modules/activity/middleware"
+	activityrepo "github.com/dedysetiawan/product-catalog-project/internal/modules/activity/repository"
 	"github.com/dedysetiawan/product-catalog-project/internal/platform/database"
 	"github.com/dedysetiawan/product-catalog-project/internal/platform/mailer"
 	platformpayment "github.com/dedysetiawan/product-catalog-project/internal/platform/payment"
@@ -26,6 +29,10 @@ import (
 	authhttp "github.com/dedysetiawan/product-catalog-project/internal/modules/auth/delivery/http"
 	authrepo "github.com/dedysetiawan/product-catalog-project/internal/modules/auth/repository"
 	authuc "github.com/dedysetiawan/product-catalog-project/internal/modules/auth/usecase"
+
+	contacthttp "github.com/dedysetiawan/product-catalog-project/internal/modules/contact/delivery/http"
+	contactrepo "github.com/dedysetiawan/product-catalog-project/internal/modules/contact/repository"
+	contactuc "github.com/dedysetiawan/product-catalog-project/internal/modules/contact/usecase"
 
 	notifdomain "github.com/dedysetiawan/product-catalog-project/internal/modules/notification/domain"
 	notifsvc "github.com/dedysetiawan/product-catalog-project/internal/modules/notification/service"
@@ -88,6 +95,12 @@ func run() error {
 	categoryHandler := producthttp.NewCategoryHandler(productuc.NewCategoryUsecase(productRepo))
 	productService := productuc.NewProductService(productRepo) // kontrak untuk modul lain
 
+	// ---- Contact module ----
+	contactRepo := contactrepo.NewPostgresContactRepository(pool)
+	contactHandler := contacthttp.NewContactHandler(contactuc.NewContactUsecase(contactRepo, smtpSender, cfg.SupportEmail))
+	activityRepo := activityrepo.NewPostgresActivityRepository(pool)
+	activityHandler := activityhttp.NewActivityHandler(activityRepo)
+
 	// ---- Transaction module (hanya tahu produk lewat ProductServiceContract) ----
 	trxRepo := trxrepo.NewPostgresTransactionRepository(pool)
 	reportHandler := trxhttp.NewTransactionHandler(trxuc.NewReportUsecase(trxRepo, productService, cfg.LowStockThreshold))
@@ -114,15 +127,19 @@ func run() error {
 	v1 := r.Group("/api/v1")
 	catalogHandler.RegisterRoutes(v1)  // GET  /products, /products/:id
 	checkoutHandler.RegisterRoutes(v1) // POST /checkout, /payments/webhook
+	contactHandler.RegisterRoutes(v1)  // POST /contact-us
 
 	admin := v1.Group("/admin")
 	authHandler.RegisterRoutes(admin) // POST /admin/login
 	protected := admin.Group("", middleware.JWTAuth(tokens, userRepo))
+	protected.Use(activitymiddleware.Audit(activityRepo, roleRepo))
 	adminUserHandler.RegisterAdminRoutes(protected, roleRepo)
 	roleHandler.RegisterAdminRoutes(protected, roleRepo)
 	categoryHandler.RegisterAdminRoutes(protected, roleRepo)
 	productHandler.RegisterAdminRoutes(protected, roleRepo)
 	reportHandler.RegisterAdminRoutes(protected, roleRepo)
+	contactHandler.RegisterAdminRoutes(protected, roleRepo)
+	activityHandler.RegisterAdminRoutes(protected, roleRepo)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

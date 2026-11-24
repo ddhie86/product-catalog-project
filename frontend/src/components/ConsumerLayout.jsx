@@ -23,6 +23,7 @@ export default function ConsumerLayout() {
             <Link to="/" className={isCatalog ? 'text-sm font-semibold text-brand' : navLink}>Beranda</Link>
             <Link to="/#categories" className={navLink}>Kategori</Link>
             <Link to="/#catalog" className={navLink}>Semua Produk</Link>
+            <Link to="/contact-us" className={navLink}>Hubungi kami</Link>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -41,6 +42,7 @@ export default function ConsumerLayout() {
             <Link to="/" className={isCatalog ? 'text-brand' : navLink}>Beranda</Link>
             <Link to="/#categories" className={navLink}>Kategori</Link>
             <Link to="/#catalog" className={navLink}>Semua Produk</Link>
+            <Link to="/contact-us" className={navLink}>Hubungi kami</Link>
           </div>
         </nav>
       </header>
@@ -49,32 +51,50 @@ export default function ConsumerLayout() {
         <Outlet />
       </main>
 
-      <footer className="mt-12 bg-ink text-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">
+      <footer className="mt-auto border-t-2 border-brand bg-ink text-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.5fr_1fr_1.2fr] lg:px-8">
           <div>
-            <Link to="/" className="text-xl font-bold tracking-tight">Product<span className="text-blue-300">Catalog</span>.</Link>
-            <p className="mt-3 max-w-xs text-sm leading-6 text-slate-300">
+            <Link to="/" className="text-xl font-bold tracking-tight">
+              Product<span className="text-blue-300">Catalog</span>.
+            </Link>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-slate-300">
               Temukan pilihan produk berkualitas untuk kebutuhan sehari-hari Anda.
             </p>
           </div>
-          <div>
+
+          <nav aria-label="Navigasi footer">
             <h2 className="text-sm font-semibold">Jelajahi</h2>
-            <div className="mt-3 flex flex-col items-start gap-2 text-sm text-slate-300">
-              <Link to="/" className="hover:text-white">Beranda</Link>
-              <Link to="/#categories" className="hover:text-white">Kategori produk</Link>
-              <Link to="/#catalog" className="hover:text-white">Semua produk</Link>
+            <div className="mt-4 flex flex-col items-start gap-3 text-sm text-slate-300">
+              <Link to="/" className="transition-colors hover:text-white">Beranda</Link>
+              <Link to="/#categories" className="transition-colors hover:text-white">Kategori produk</Link>
+              <Link to="/#catalog" className="transition-colors hover:text-white">Semua produk</Link>
             </div>
-          </div>
+          </nav>
+
           <div>
-            <h2 className="text-sm font-semibold">Informasi</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-300">Butuh bantuan? Hubungi tim kami melalui kanal kontak toko.</p>
-            <Link to="/admin" className="mt-3 inline-flex text-sm text-blue-300 hover:text-white">Masuk sebagai admin</Link>
+            <h2 className="text-sm font-semibold">Butuh bantuan?</h2>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-slate-300">
+              Kirim pertanyaan atau keluhan Anda, tim kami siap membantu.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <Link
+                to="/contact-us"
+                className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+              >
+                Hubungi kami
+                <span aria-hidden="true">→</span>
+              </Link>
+              <Link to="/admin" className="text-sm text-slate-300 transition-colors hover:text-white">
+                Masuk admin
+              </Link>
+            </div>
           </div>
         </div>
         <div className="border-t border-white/10">
-          <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-400 sm:px-6 lg:px-8">
-            © {new Date().getFullYear()} Product Catalog. All rights reserved.
-          </p>
+          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <p>© {new Date().getFullYear()} Product Catalog. All rights reserved.</p>
+            <p>Dibuat untuk pengalaman belanja yang lebih mudah.</p>
+          </div>
         </div>
       </footer>
     </div>
