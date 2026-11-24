@@ -36,6 +36,13 @@ export default function ConsumerLayout() {
             </Link>
           </div>
         </div>
+        <nav aria-label="Navigasi mobile" className="border-t border-line/70 px-4 py-2.5 md:hidden">
+          <div className="mx-auto flex max-w-7xl items-center justify-center gap-8 text-xs font-semibold">
+            <Link to="/" className={isCatalog ? 'text-brand' : navLink}>Beranda</Link>
+            <Link to="/#categories" className={navLink}>Kategori</Link>
+            <Link to="/#catalog" className={navLink}>Semua Produk</Link>
+          </div>
+        </nav>
       </header>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
