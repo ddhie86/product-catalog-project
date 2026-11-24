@@ -143,11 +143,11 @@ export default function CatalogPage() {
         )}
         {items.length > 0 && (
           <>
-            <div className="mb-4 flex items-center justify-between text-xs text-ink-soft">
+            <div aria-live="polite" className="mb-4 flex items-center justify-between text-xs text-ink-soft">
               <span>{products.data?.meta?.total_items ?? items.length} produk ditemukan</span>
               {products.isFetching && <span>Memperbarui...</span>}
             </div>
-            <ul className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-3 xl:grid-cols-4">
+            <ul className="grid grid-cols-2 justify-start gap-x-3 gap-y-8 sm:grid-cols-[repeat(auto-fill,minmax(220px,280px))] sm:gap-x-5 sm:gap-y-9">
               {items.map((product) => <li key={product.id}><ProductCard product={product} /></li>)}
             </ul>
           </>
