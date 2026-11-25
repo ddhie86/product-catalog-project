@@ -64,3 +64,54 @@ func TestValidateDatabaseConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateGoogleDriveConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     GoogleDriveConfig
+		enabled bool
+		wantErr bool
+	}{
+		{
+			name: "image uploads are optional",
+			cfg:  GoogleDriveConfig{MaxUploadBytes: 5 << 20},
+		},
+		{
+			name: "complete OAuth configuration enables image uploads",
+			cfg: GoogleDriveConfig{
+				OAuthClientID: "client-id", OAuthClientSecret: "client-secret",
+				RefreshToken: "refresh-token", RootFolderID: "folder-id",
+				MaxUploadBytes: 5 << 20,
+			},
+			enabled: true,
+		},
+		{
+			name: "partial OAuth configuration is rejected",
+			cfg: GoogleDriveConfig{
+				OAuthClientID:  "client-id",
+				MaxUploadBytes: 5 << 20,
+			},
+			wantErr: true,
+		},
+		{
+			name: "non-positive upload limit is rejected",
+			cfg: GoogleDriveConfig{
+				MaxUploadBytes: 0,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.cfg
+			err := validateGoogleDriveConfig(&cfg)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validateGoogleDriveConfig() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && cfg.Enabled != tt.enabled {
+				t.Fatalf("Enabled = %v, want %v", cfg.Enabled, tt.enabled)
+			}
+		})
+	}
+}

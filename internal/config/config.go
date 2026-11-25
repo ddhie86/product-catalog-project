@@ -32,8 +32,20 @@ type Config struct {
 	SMTPFrom     string
 	SupportEmail string
 
+	GoogleDrive GoogleDriveConfig
+
 	LowStockThreshold int
 	EmailQueueSize    int
+}
+
+type GoogleDriveConfig struct {
+	OAuthClientID     string
+	OAuthClientSecret string
+	RefreshToken      string
+	RootFolderID      string
+	PublicImages      bool
+	MaxUploadBytes    int64
+	Enabled           bool
 }
 
 type DatabaseConfig struct {
@@ -54,6 +66,14 @@ func Load() (*Config, error) {
 	dbPort, err := strconv.Atoi(get("DB_PORT", "5432"))
 	if err != nil {
 		return nil, fmt.Errorf("DB_PORT must be an integer between 1 and 65535")
+	}
+	driveMaxUploadBytes, err := strconv.ParseInt(get("GOOGLE_DRIVE_MAX_UPLOAD_BYTES", "5242880"), 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("GOOGLE_DRIVE_MAX_UPLOAD_BYTES must be a positive integer")
+	}
+	drivePublicImages, err := strconv.ParseBool(get("GOOGLE_DRIVE_PUBLIC_IMAGES", "true"))
+	if err != nil {
+		return nil, fmt.Errorf("GOOGLE_DRIVE_PUBLIC_IMAGES must be true or false")
 	}
 	cfg := &Config{
 		Env:            get("APP_ENV", "development"),
@@ -79,8 +99,19 @@ func Load() (*Config, error) {
 		SMTPPass:            os.Getenv("SMTP_PASS"),
 		SMTPFrom:            get("SMTP_FROM", "no-reply@catalog.local"),
 		SupportEmail:        strings.TrimSpace(os.Getenv("SUPPORT_EMAIL")),
-		LowStockThreshold:   getInt("LOW_STOCK_THRESHOLD", 5),
-		EmailQueueSize:      getInt("EMAIL_QUEUE_SIZE", 256),
+		GoogleDrive: GoogleDriveConfig{
+			OAuthClientID:     strings.TrimSpace(os.Getenv("GOOGLE_DRIVE_OAUTH_CLIENT_ID")),
+			OAuthClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRET")),
+			RefreshToken:      strings.TrimSpace(os.Getenv("GOOGLE_DRIVE_REFRESH_TOKEN")),
+			RootFolderID:      strings.TrimSpace(os.Getenv("GOOGLE_DRIVE_ROOT_FOLDER_ID")),
+			PublicImages:      drivePublicImages,
+			MaxUploadBytes:    driveMaxUploadBytes,
+		},
+		LowStockThreshold: getInt("LOW_STOCK_THRESHOLD", 5),
+		EmailQueueSize:    getInt("EMAIL_QUEUE_SIZE", 256),
+	}
+	if err := validateGoogleDriveConfig(&cfg.GoogleDrive); err != nil {
+		return nil, err
 	}
 	if err := validateDatabaseConfig(cfg.Database, cfg.Env); err != nil {
 		return nil, err
@@ -96,6 +127,24 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("SUPPORT_EMAIL must be a valid email address")
 	}
 	return cfg, nil
+}
+
+func validateGoogleDriveConfig(cfg *GoogleDriveConfig) error {
+	values := []string{cfg.OAuthClientID, cfg.OAuthClientSecret, cfg.RefreshToken, cfg.RootFolderID}
+	provided := 0
+	for _, value := range values {
+		if value != "" {
+			provided++
+		}
+	}
+	if provided != 0 && provided != len(values) {
+		return fmt.Errorf("GOOGLE_DRIVE_OAUTH_CLIENT_ID, GOOGLE_DRIVE_OAUTH_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN, and GOOGLE_DRIVE_ROOT_FOLDER_ID must be configured together")
+	}
+	if cfg.MaxUploadBytes <= 0 || cfg.MaxUploadBytes > int64(^uint64(0)>>1)-(64<<10) {
+		return fmt.Errorf("GOOGLE_DRIVE_MAX_UPLOAD_BYTES must be a positive integer")
+	}
+	cfg.Enabled = provided == len(values)
+	return nil
 }
 
 func validateDatabaseConfig(db DatabaseConfig, env string) error {

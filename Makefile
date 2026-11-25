@@ -4,7 +4,7 @@ export
 APP     := product-catalog
 DB_URL  = postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
 
-.PHONY: run build test cover fmt vet tidy check-db-config migrate-up migrate-down seed bootstrap up down
+.PHONY: run build test cover fmt vet tidy check-db-config migrate-up migrate-down seed bootstrap up down google-drive-auth
 
 run:            ## Jalankan API
 	go run ./cmd/api
@@ -51,3 +51,6 @@ up:             ## Start PostgreSQL and Mailpit for local development
 
 down:
 	docker compose down
+
+google-drive-auth:
+	go run ./cmd/google-drive-auth

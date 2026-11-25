@@ -8,6 +8,7 @@ import { Button } from '@/components/Button.jsx';
 import { TextAreaField, TextField } from '@/components/FormFields.jsx';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States.jsx';
 import { formatRupiah } from '@/lib/format';
+import ProductImage from '@/components/ProductImage.jsx';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -110,7 +111,7 @@ export default function CheckoutPage() {
         <h2 className="font-semibold">Ringkasan pesanan</h2>
         <div className="mt-3 flex gap-3 text-sm">
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded bg-paper">
-            {p.image_url && <img src={p.image_url} alt="" className="h-full w-full object-cover" />}
+            <ProductImage src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
           </div>
           <div>
             <p className="font-medium">{p.name}</p>

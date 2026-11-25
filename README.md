@@ -48,6 +48,34 @@ creates the permission and role tables, installs the default roles, and assigns
 existing admin accounts to **Super Admin**. The seed command also assigns the
 new initial account to **Super Admin**.
 
+### Google Drive product images
+
+Image uploads are optional; without Drive credentials, the API starts normally
+and the upload endpoint returns `503`. To enable uploads, enable the Google
+Drive API in a Google Cloud project, configure the OAuth consent screen for
+your Gmail account, and create an OAuth client suitable for a local desktop
+authorization flow. Add the client ID and secret to the untracked `.env`, then
+run:
+
+```bash
+make google-drive-auth
+```
+
+Open the printed URL in the Gmail account whose My Drive will store the images.
+The helper prints a refresh token and project-root folder ID; save both in
+`.env` as `GOOGLE_DRIVE_REFRESH_TOKEN` and `GOOGLE_DRIVE_ROOT_FOLDER_ID`, then
+restart the API. The helper uses the `drive.file` scope and creates or reuses
+`Product Catalog Project` in My Drive. The API lazily creates
+`product-images/products` beneath that folder. OAuth credentials and refresh
+tokens must remain in `.env` or a secret manager; never put them in frontend
+variables or source control.
+
+The admin product form accepts one JPEG, PNG, or WebP image up to 5 MiB. When
+`GOOGLE_DRIVE_PUBLIC_IMAGES=true`, only the uploaded file is granted public
+reader access so the catalog can display its stable `drive.google.com` URL.
+Google Drive is not a CDN and can impose download and hotlink limits. Replacing
+or clearing a product image does not delete the previous Drive file.
+
 ## API endpoints and permissions
 
 All `/admin` routes except login require a valid admin JWT. Management routes
@@ -60,6 +88,7 @@ frontend is not the security boundary.
 | GET | `/api/v1/admin/permissions` | JWT |
 | GET/POST | `/api/v1/admin/products` | `products:view` / `products:create` |
 | PUT/DELETE | `/api/v1/admin/products/:id` | `products:edit` / `products:delete` |
+| POST | `/api/v1/admin/product-images` | `products:create` or `products:edit` |
 | GET/POST | `/api/v1/admin/categories` | `categories:view` / `categories:create` |
 | PUT/DELETE | `/api/v1/admin/categories/:id` | `categories:edit` / `categories:delete` |
 | GET/POST | `/api/v1/admin/users` | `users:view` / `users:create` |

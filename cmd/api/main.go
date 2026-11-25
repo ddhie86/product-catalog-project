@@ -20,6 +20,7 @@ import (
 	activitymiddleware "github.com/dedysetiawan/product-catalog-project/internal/modules/activity/middleware"
 	activityrepo "github.com/dedysetiawan/product-catalog-project/internal/modules/activity/repository"
 	"github.com/dedysetiawan/product-catalog-project/internal/platform/database"
+	platformgoogledrive "github.com/dedysetiawan/product-catalog-project/internal/platform/googledrive"
 	"github.com/dedysetiawan/product-catalog-project/internal/platform/mailer"
 	platformpayment "github.com/dedysetiawan/product-catalog-project/internal/platform/payment"
 	"github.com/dedysetiawan/product-catalog-project/pkg/logger"
@@ -91,6 +92,11 @@ func run() error {
 	// ---- Product module ----
 	productRepo := productrepo.NewPostgresProductRepository(pool)
 	productHandler := producthttp.NewProductHandler(productuc.NewProductUsecase(productRepo))
+	driveStorage, err := platformgoogledrive.NewGoogleDriveStorage(ctx, cfg.GoogleDrive)
+	if err != nil {
+		return err
+	}
+	productImageHandler := producthttp.NewProductImageHandler(driveStorage, cfg.GoogleDrive.MaxUploadBytes)
 	catalogHandler := producthttp.NewCatalogHandler(productuc.NewCatalogUsecase(productRepo))
 	categoryHandler := producthttp.NewCategoryHandler(productuc.NewCategoryUsecase(productRepo))
 	productService := productuc.NewProductService(productRepo) // kontrak untuk modul lain
@@ -137,6 +143,7 @@ func run() error {
 	roleHandler.RegisterAdminRoutes(protected, roleRepo)
 	categoryHandler.RegisterAdminRoutes(protected, roleRepo)
 	productHandler.RegisterAdminRoutes(protected, roleRepo)
+	productImageHandler.RegisterAdminRoutes(protected, roleRepo)
 	reportHandler.RegisterAdminRoutes(protected, roleRepo)
 	contactHandler.RegisterAdminRoutes(protected, roleRepo)
 	activityHandler.RegisterAdminRoutes(protected, roleRepo)

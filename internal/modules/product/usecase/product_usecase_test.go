@@ -23,8 +23,8 @@ func newFakeRepo() *fakeRepo {
 }
 
 func (f *fakeRepo) Create(_ context.Context, p *domain.Product) error { f.bySKU[p.SKU] = p; return nil }
-func (f *fakeRepo) Update(context.Context, *domain.Product) error      { return nil }
-func (f *fakeRepo) Delete(context.Context, uuid.UUID) error            { return nil }
+func (f *fakeRepo) Update(context.Context, *domain.Product) error     { return nil }
+func (f *fakeRepo) Delete(context.Context, uuid.UUID) error           { return nil }
 func (f *fakeRepo) FindByID(context.Context, uuid.UUID) (*domain.Product, error) {
 	return nil, apperror.NotFound("product not found")
 }
@@ -44,9 +44,9 @@ func (f *fakeRepo) CategoryExists(_ context.Context, id uuid.UUID) (bool, error)
 	return f.categories[id], nil
 }
 func (f *fakeRepo) ListCategories(context.Context) ([]domain.Category, error) { return nil, nil }
-func (f *fakeRepo) DeductStock(context.Context, uuid.UUID, int) error  { return nil }
-func (f *fakeRepo) RestoreStock(context.Context, uuid.UUID, int) error { return nil }
-func (f *fakeRepo) CountLowStock(context.Context, int) (int, error)    { return 0, nil }
+func (f *fakeRepo) DeductStock(context.Context, uuid.UUID, int) error         { return nil }
+func (f *fakeRepo) RestoreStock(context.Context, uuid.UUID, int) error        { return nil }
+func (f *fakeRepo) CountLowStock(context.Context, int) (int, error)           { return 0, nil }
 
 func TestCreateProduct_Success(t *testing.T) {
 	uc := usecase.NewProductUsecase(newFakeRepo())
