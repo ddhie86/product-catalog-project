@@ -7,6 +7,7 @@ import { Button } from '@/components/Button.jsx';
 import { Modal } from '@/components/Modal.jsx';
 import { SelectField, TextAreaField, TextField } from '@/components/FormFields.jsx';
 import { useAuth } from '@/modules/auth/AuthContext.jsx';
+import ProductImage from '@/components/ProductImage.jsx';
 
 const toForm = (p) => ({
   name: p?.name ?? '',
@@ -183,7 +184,7 @@ function ProductForm({ product, onClose }) {
         )}
         {(localPreview || form.image_url) && (
           <div className="flex items-start gap-3">
-            <img
+            <ProductImage
               src={localPreview || form.image_url}
               alt="Pratinjau gambar produk"
               className="h-24 w-24 rounded-md border border-line bg-paper object-cover"
