@@ -1,10 +1,16 @@
-# Google Drive Product Image Upload — Implementation Plan
+# Google Drive Image Management — Implementation Plan
 
-## Status and scope
+## Scope
 
-This document is the implementation specification for the prototype's product-image upload flow. It is intentionally a plan rather than a claim that the integration is already working. The repository's current product model already has `image_url`; the admin form currently accepts a manually entered URL. Preserve that API/database contract and replace the manual URL workflow with an upload + preview workflow.
+Implement Google Drive image management from the relevant admin entity screens:
 
-Target storage for this prototype: the owner's **personal Gmail Google Drive (My Drive)**.
+- **Product Management:** one or more images per product, exactly one main image, plus ordered additional images shown as thumbnails in the product gallery.
+- **Product Category Management:** one category image per category.
+- **Shared storage provider:** one Google Drive integration used by both flows, with separate folders and entity-specific authorization.
+
+This is a specification, not a claim that runtime integration is already implemented. The repository already has a `products.image_url` field and the admin product form currently accepts a manually entered URL. Preserve backward compatibility while introducing the gallery.
+
+Target storage: the owner's **personal Gmail Google Drive (My Drive)**.
 
 ## Important authentication decision: personal Drive vs Service Account
 
@@ -16,97 +22,176 @@ One-time setup:
 1. Create/select a Google Cloud project.
 2. Enable the Google Drive API.
 3. Configure the OAuth consent screen for the intended account (for a private prototype, use the appropriate testing audience and add the owner's Gmail as a test user).
-4. Create an OAuth Client ID for a Desktop app or another controlled one-time authorization flow.
-5. Run a small local authorization helper to obtain a refresh token for the owner's Gmail account.
+4. Create an OAuth Client ID for a controlled one-time authorization flow.
+5. Run a local authorization helper to obtain a refresh token for the owner's Gmail account.
 6. Keep the OAuth client secret and refresh token outside Git. Never put either in React/Vite variables or browser code.
 
-Request the narrowest practical Drive scope. If using `drive.file`, verify that the app can create and manage the files/folders it creates. The implementation should not request broad Drive access without a demonstrated need.
+Request the narrowest practical Drive scope. Verify that the selected scope permits the app to create and manage the folders/files it owns. Do not request broad Drive access without a demonstrated need.
 
 ## Drive folder organization
 
-Create a dedicated project root folder in My Drive, for example:
+Create a dedicated project root folder in My Drive:
 
 ```text
 My Drive/
 └── Product Catalog Project/
     └── product-images/
         ├── products/
-        ├── categories/
-        └── thumbnails/
+        │   ├── {product-id-1}/
+        │   │   ├── {image-uuid-1}.webp
+        │   │   └── {image-uuid-2}.webp
+        │   └── {product-id-2}/
+        └── categories/
+            ├── {category-id-1}-{image-uuid}.webp
+            └── {category-id-2}-{image-uuid}.webp
 ```
 
-The implementation should:
-- Accept the root folder ID via backend configuration.
-- Create the child folders idempotently (search by parent + folder name; create only if missing).
-- Save the resolved child folder IDs in memory for the process lifetime, or resolve them safely on startup.
-- Upload product images into `products/`.
+Implementation requirements:
+- Accept the project root folder ID via backend configuration.
+- Create child folders idempotently (search by parent + folder name; create only if missing).
+- Create a product subfolder lazily when the first image is uploaded for that product.
+- Upload category images into the configured `categories/` folder.
 - Never search or write outside the configured project root.
-- Avoid hard-coding a user's Drive folder ID in source code.
+- Generate UUID-based filenames; do not trust client filenames as paths.
+- Keep resolved folder IDs in memory or resolve them safely on startup.
 
 ## Existing repository integration points
 
-- Backend entry point and dependency injection: `cmd/api/main.go`.
-- Backend environment config: `internal/config/config.go` and `.env.example`.
-- Product admin routes: `internal/modules/product/delivery/http/product_handler.go`.
-- Product JSON contract already contains `image_url`: `internal/modules/product/domain/product.go`.
-- Admin React form: `frontend/src/modules/admin-products/ProductFormModal.jsx`.
-- Admin API client: `frontend/src/modules/admin-products/services/adminProductApi.js`.
+- Backend dependency injection: `cmd/api/main.go`.
+- Backend config: `internal/config/config.go` and `.env.example`.
+- Product routes: `internal/modules/product/delivery/http/product_handler.go`.
+- Category routes: `internal/modules/product/delivery/http/category_handler.go`.
+- Product and Category domain contracts: `internal/modules/product/domain/product.go`.
+- Admin product form/API: `frontend/src/modules/admin-products/ProductFormModal.jsx` and `frontend/src/modules/admin-products/services/adminProductApi.js`.
 - Axios auth/header handling: `frontend/src/services/apiClient.js`.
 
-Keep the existing product create/update endpoints and their JSON payloads unchanged. The image upload is a separate endpoint; its response supplies an `image_url` which is then included in the normal product save request.
+Important repository-specific note: Product and Category are currently managed inside the same Go product module, but have separate route groups and permissions. Existing category permissions are `categories:view`, `categories:create`, `categories:edit`, and `categories:delete`.
 
-## Proposed API contract
+## Data model
 
-### Upload
+### Product gallery
 
-`POST /api/v1/admin/product-images`
+Add a `product_images` table:
 
-- Requires the existing admin JWT middleware.
-- Authorization must allow a user with either `products:create` OR `products:edit`, because the same form is used for both creating and editing products. Do not weaken authorization to any authenticated admin.
-- Content type: `multipart/form-data`.
-- Field name: `file`.
-- Initial prototype limits: JPEG, PNG, and WebP only; maximum 5 MiB; reject SVG and other active-content formats.
-- Validate by inspecting file content (not only the submitted MIME type or extension).
-- Generate a safe unique Drive filename; do not trust the client filename as a path.
-- Upload into the configured `products/` folder.
-- Apply public read access only if the catalog is intended to be public. Do not make the project root or all Drive contents public.
-- Return a small JSON object, e.g. `{ "image_url": "...", "file_id": "...", "name": "..." }`.
-- Use a stable image URL that can be used by the existing `image_url` field. For the prototype, the Drive file must be readable by the public catalog if images are public. Document that Drive's `uc?export=view` URL is not a CDN and may have quota/hotlink limitations.
-- On failure, return a sanitized API error; never return OAuth tokens, client secrets, or raw provider response bodies.
+| Column | Type | Notes |
+|---|---|---|
+| id | UUID | Primary key |
+| product_id | UUID | FK to products |
+| drive_file_id | VARCHAR | Google Drive file ID |
+| image_url | TEXT | URL used by the catalog |
+| is_main | BOOLEAN | Main image flag |
+| sort_order | INTEGER | Gallery order |
+| created_at | TIMESTAMP | Creation time |
+| updated_at | TIMESTAMP | Last update |
 
-### Delete/replace behavior
+Constraints and consistency:
+- Add a partial unique index on `product_id` where `is_main = true`, ensuring at most one main image per product.
+- Enforce that a product with images has exactly one main image through transactional application logic; a newly created product may temporarily have no images.
+- When the first image is added, make it main automatically.
+- Selecting another main image must update the old and new flags in one database transaction.
+- Reordering must use a transaction and deterministic sort order.
+- When deleting the main image, promote the first remaining image to main in the same transaction.
+- Mirror the main image URL into the existing `products.image_url` field to keep old product listing/detail clients backward compatible. If no gallery image remains, set it to an empty value.
+- Do not store a comma-separated list or JSON array in `products.image_url`.
 
-Do not delete the old Drive image automatically when a product image is replaced in this first iteration. Product updates may fail after upload, and immediate deletion could break the current product image. Add orphan cleanup as a separate future task after a reliable product-to-file lifecycle is designed.
+### Category image
 
-## Backend implementation tasks
+Category currently has a simple entity and separate category permissions. For the prototype, add nullable `image_url` and `drive_file_id` fields to the category record (or a one-to-one category image table if the repository's migration conventions favor it). There is one image per category, not a gallery.
 
-1. Add a small storage abstraction in the product infrastructure/delivery boundary (or a dedicated platform package), e.g. `ImageStorage` with `Upload(ctx, reader, metadata) -> result`.
+Add migrations with reversible up/down scripts. Inspect the actual schema and migration conventions before writing SQL.
+
+## API design
+
+All routes remain under the existing JWT-protected admin route group.
+
+### Product gallery
+
+- `POST /api/v1/admin/products/:id/images` — multipart upload; permission `products:edit`.
+- `GET /api/v1/admin/products/:id/images` — list gallery; permission `products:view`.
+- `PATCH /api/v1/admin/products/:id/images/:imageId/main` — set main image; permission `products:edit`.
+- `PATCH /api/v1/admin/products/:id/images/reorder` — update ordered image IDs; permission `products:edit`.
+- `DELETE /api/v1/admin/products/:id/images/:imageId` — delete image relation and then remove Drive file safely; permission `products:edit`.
+
+Product creation should remain independent of image upload: create the product first, then upload images using its ID. The React form may orchestrate this after the product is created. For edit, upload directly against the existing product ID.
+
+### Category image
+
+- `PUT /api/v1/admin/categories/:id/image` — multipart upload or replace; permission `categories:edit`.
+- `DELETE /api/v1/admin/categories/:id/image` — remove category image relation and then remove Drive file safely; permission `categories:edit`.
+
+Do not use a generic endpoint that allows a caller to choose an arbitrary Drive folder or entity type. Entity-specific routes make authorization and folder selection explicit.
+
+### Upload validation
+
+- Content type: `multipart/form-data`; field name: `file`.
+- Allow JPEG, PNG, and WebP only; reject SVG and other active-content formats.
+- Maximum upload size: 5 MiB initially, configurable server-side.
+- Limit request body before multipart parsing.
+- Inspect file content (not only extension or browser MIME type); verify extension consistency.
+- Generate UUID filenames and set safe Drive metadata.
+- Apply public read permission only to each image file if the public catalog needs it. Never make the entire project root public.
+- Return `image_url`, `file_id`, and image metadata; never return credentials or raw provider errors.
+- Use a stable image URL for the existing catalog. Document that Drive is not a CDN and may have quota/hotlink limitations.
+
+### Safe deletion and replacement
+
+Drive and PostgreSQL cannot participate in one atomic transaction. Avoid deleting an old Drive file before the database change succeeds.
+
+Recommended sequence:
+1. Upload the new file.
+2. Commit the database relation/main-image change.
+3. Delete the old Drive file after commit.
+4. If step 3 fails, log a cleanup task/orphan candidate; do not roll back a valid new image.
+5. For deletion, remove the database relation and record a pending Drive cleanup, then retry provider deletion safely.
+
+For the prototype, a small cleanup-pending table or structured retry mechanism is preferable to silently leaving untracked files. Ensure a provider deletion failure does not corrupt the gallery state.
+
+## Backend architecture
+
+1. Create a shared storage abstraction, e.g. `ImageStorage`, with upload/delete operations and typed metadata/results.
 2. Implement a Google Drive adapter using the official Google API client and OAuth2 refresh-token credentials.
-3. Add configuration fields for OAuth client ID, OAuth client secret, refresh token (or a protected token-file path), and project root folder ID. Validate all-or-none configuration; when not configured, the app should start normally and the upload endpoint should return a clear `503 image storage is not configured`.
-4. Add a maximum request body size before multipart parsing, then validate file size, detected MIME type, and extension consistency.
-5. Register the upload handler under the existing JWT-protected admin group. Add explicit OR permission handling for `products:create` and `products:edit` (or define a narrowly scoped permission and update default role seeds consistently).
-6. Keep Google Drive calls out of the product domain/use case. The storage adapter is infrastructure, not product business logic.
-7. Add tests for: unconfigured storage, oversized upload, invalid MIME, unauthorized admin, insufficient permissions, Drive API error mapping, and successful upload using a fake storage implementation.
-8. Add structured logs for operation outcome and file ID only. Do not log file bytes, OAuth credentials, refresh tokens, or image contents.
+3. Keep provider-specific code outside product domain/use cases.
+4. Add a product image use case/repository for gallery operations and a category image use case/repository for one-to-one category image changes, reusing the same storage adapter.
+5. Validate entity existence before upload.
+6. Enforce existing entity-specific permissions. Product upload uses `products:edit`; category upload uses `categories:edit`.
+7. Add tests for unconfigured storage, oversized upload, invalid MIME, unauthorized users, insufficient permissions, entity-not-found, Drive API errors, first-image-main behavior, main-image switching, reorder, deleting main image, category replace, and cleanup failures.
+8. Log operation result and Drive file ID only. Never log credentials, tokens, file bytes, or image contents.
 
-## Frontend implementation tasks
+If Drive is not configured, the app should start normally and image endpoints should return a clear `503 image storage is not configured`.
 
-1. Add `uploadProductImage(file)` to `adminProductApi.js`, sending `FormData` to `/admin/product-images`. Do not manually set the multipart boundary; let Axios/browser set it.
-2. Update `ProductFormModal.jsx`:
-   - Replace the plain URL input with a file input and an upload button.
-   - Show upload progress/loading and a preview.
-   - Store the returned `image_url` in the existing form state.
-   - Keep the existing `image_url` value when editing a product that already has an image.
-   - Allow removing the selected image from the form without deleting the Drive file.
-   - Display clear validation/API errors.
-   - Disable duplicate uploads while one is in progress.
-3. Preserve the existing create/update payload shape and query invalidation.
-4. Add frontend tests for valid selection, upload success, upload error, preview, and create/edit form behavior.
+## Frontend implementation
 
-## Environment variables (names are proposed)
+### Product Management form
+
+Add an Image Gallery section:
+- Multi-file selection and upload.
+- Main image preview, additional thumbnail strip, and upload progress.
+- Mark any thumbnail as Main Image.
+- Reorder thumbnails.
+- Remove a selected image with confirmation.
+- First successfully uploaded image becomes main automatically.
+- If creating a product, save the product first to obtain its ID, then upload selected images. Show partial failure clearly and allow retry without duplicating already uploaded files.
+- When editing, load existing gallery and preserve it unless the admin explicitly changes it.
+- Do not delete Drive files just because a local selection is cleared before save.
+
+### Category Management form
+
+Add a single image picker:
+- Upload/replace category image.
+- Preview current image.
+- Remove image with confirmation.
+- Use the category-specific API and permission.
+
+### API client
+
+Add explicit functions for product gallery list/upload/set-main/reorder/delete and category image upload/delete. Use `FormData` and let Axios/browser set the multipart boundary. Preserve existing product/category create and update JSON contracts except for the additive category image fields if selected.
+
+Add frontend tests for gallery interactions, upload progress/errors, main selection, reorder, deletion confirmation, product create-then-upload behavior, and category image replacement.
+
+## Environment variables (proposed)
 
 ```dotenv
-# Leave empty to disable image uploads locally.
+# Leave empty to disable Google Drive image management.
 GOOGLE_DRIVE_OAUTH_CLIENT_ID=
 GOOGLE_DRIVE_OAUTH_CLIENT_SECRET=
 GOOGLE_DRIVE_REFRESH_TOKEN=
@@ -115,20 +200,21 @@ GOOGLE_DRIVE_PUBLIC_IMAGES=true
 GOOGLE_DRIVE_MAX_UPLOAD_BYTES=5242880
 ```
 
-Use server-side secrets only. Add these keys to `.env.example` with empty values and document setup. Never commit a real `.env`, OAuth client secret, refresh token, or downloaded credential JSON.
+Secrets must remain server-side. Add empty keys to `.env.example` and document setup. Never commit a real `.env`, OAuth client secret, refresh token, or credential JSON.
 
 ## Acceptance criteria
 
-- Existing catalog and product create/update API contracts remain backward compatible.
-- A product admin with `products:create` or `products:edit` can upload a supported image.
-- An admin without either permission cannot upload.
-- Uploaded files appear only under the configured Product Catalog project folder.
-- Public catalog product cards and detail pages can render the returned `image_url`.
-- No database migration is required.
-- Upload is disabled gracefully when Drive configuration is absent.
+- Product can have multiple images and exactly one main image whenever its gallery is non-empty.
+- Product main image is reflected in the existing `products.image_url` field for backward compatibility.
+- Public product listing uses the main image; product detail exposes the full ordered gallery.
+- Category supports one image.
+- Product and Category images are uploaded into their respective configured Drive folders.
+- Product image routes require `products:edit`; category image routes require `categories:edit`.
+- Existing product/category create/update behavior remains backward compatible.
+- Drive configuration can be absent without preventing API startup.
+- Provider failures do not leave the database pointing at a deleted image.
 - `go test ./...`, frontend tests, and `npm run build` pass.
-- Setup instructions explain Google Cloud OAuth consent and one-time refresh-token authorization for a personal Gmail account.
 
 ## Suggested VS Code Copilot Agent prompt
 
-> Implement the Google Drive product-image upload described in `docs/google-drive-image-upload.md`. First inspect the existing architecture and tests. Use OAuth 2.0 for the personal Gmail owner's My Drive (not a Service Account). Keep Google Drive integration in an infrastructure adapter behind an interface. Add a JWT-protected multipart upload endpoint with an explicit OR check for `products:create` or `products:edit`. Validate actual file content, allow only JPEG/PNG/WebP, enforce a 5 MiB limit, and upload only into the configured project subfolder. Keep the existing product `image_url` contract and product create/update endpoints unchanged. Update the React admin form to upload, preview, and save the returned URL. Add tests and setup documentation. Never commit credentials. Run Go tests, frontend tests, and frontend build; report any checks that cannot be run rather than claiming they passed.
+> Implement the Google Drive image management described in `docs/google-drive-image-upload.md`. First inspect the existing architecture, migrations, permissions, and tests. Use OAuth 2.0 for the personal Gmail owner's My Drive, not a Service Account. Build one shared Google Drive storage adapter behind an interface. Product Management must support a gallery with multiple images, exactly one main image, ordered thumbnails, set-main, reorder, and delete. Keep the existing `products.image_url` field synchronized with the main image for backward compatibility, and expose the ordered gallery on product detail. Category Management must support one image. Use entity-specific JWT-protected routes and existing permissions: `products:edit` and `categories:edit`. Validate actual file content, allow JPEG/PNG/WebP only, enforce a configurable 5 MiB limit, and upload only inside the configured project folders. Add reversible database migrations, safe Drive cleanup behavior, frontend controls in the respective Product and Category forms, and comprehensive tests. Never commit credentials. Run Go tests, frontend tests, and frontend build; report any checks that cannot be run rather than claiming they passed. Do not merge the PR automatically.
