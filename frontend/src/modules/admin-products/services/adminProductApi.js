@@ -21,3 +21,15 @@ export async function updateProduct(id, data) {
 export function deleteProduct(id) {
   return request({ method: 'delete', url: `/admin/products/${id}` });
 }
+
+export async function uploadProductImage(file, onUploadProgress) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await request({
+    method: 'post',
+    url: '/admin/product-images',
+    data: formData,
+    onUploadProgress,
+  });
+  return res.data;
+}

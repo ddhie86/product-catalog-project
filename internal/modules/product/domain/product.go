@@ -4,10 +4,21 @@ package domain
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+type ProductImageUploadResult struct {
+	ImageURL string `json:"image_url"`
+	FileID   string `json:"file_id"`
+	Name     string `json:"name"`
+}
+
+type ProductImageStorage interface {
+	Upload(ctx context.Context, content io.Reader, contentType, extension string) (ProductImageUploadResult, error)
+}
 
 type Product struct {
 	ID          uuid.UUID  `json:"id"`

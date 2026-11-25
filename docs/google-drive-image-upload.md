@@ -1,4 +1,37 @@
-# Google Drive Image Management — Implementation Plan
+# Google Drive Image Management — Implementation Notes
+
+> **Current implementation status:** The API and admin product form support
+> uploading one product image to personal Gmail My Drive and saving its URL in
+> the existing `products.image_url` field. The multi-image product gallery and
+> category-image flows described in the design below are not implemented yet;
+> they remain follow-up scope. This note documents the live upload setup and
+> retains the broader design requirements for that future work.
+
+## Live upload setup
+
+1. Enable the Google Drive API in a Google Cloud project.
+2. Configure the OAuth consent screen for the Gmail account that owns the
+   images, and create an OAuth client for the local authorization helper.
+3. Put `GOOGLE_DRIVE_OAUTH_CLIENT_ID` and
+   `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET` in the backend's untracked `.env`.
+4. Run `make google-drive-auth` and open its printed URL in the target Gmail
+   account. The helper requests the narrow `drive.file` scope, creates or
+   reuses the `Product Catalog Project` folder, and prints a refresh token and
+   root folder ID.
+5. Store those values in `.env` as `GOOGLE_DRIVE_REFRESH_TOKEN` and
+   `GOOGLE_DRIVE_ROOT_FOLDER_ID`, then restart the API.
+
+The backend creates or reuses `product-images/products` beneath the configured
+root folder when the first upload occurs. Uploads accept JPEG, PNG, and WebP
+files up to `GOOGLE_DRIVE_MAX_UPLOAD_BYTES` (5 MiB by default). When
+`GOOGLE_DRIVE_PUBLIC_IMAGES=true`, only each uploaded image is made publicly
+readable. The returned stable `drive.google.com/uc` URL is stored in
+`products.image_url`. Drive is not a CDN and may throttle downloads or hotlink
+traffic. Replacing or clearing an image URL does not delete the old Drive file.
+
+If the Drive OAuth settings are empty, the service starts without Drive and the
+image-upload endpoint responds with `503 image storage is not configured`.
+Never commit `.env`, OAuth client secrets, refresh tokens, or credential JSON.
 
 ## Scope
 
@@ -8,7 +41,11 @@ Implement Google Drive image management from the relevant admin entity screens:
 - **Product Category Management:** one category image per category.
 - **Shared storage provider:** one Google Drive integration used by both flows, with separate folders and entity-specific authorization.
 
-This is a specification, not a claim that runtime integration is already implemented. The repository already has a `products.image_url` field and the admin product form currently accepts a manually entered URL. Preserve backward compatibility while introducing the gallery.
+The existing runtime integration currently uploads one product image before the
+product is saved and stores its URL in `products.image_url`. It does not yet
+provide gallery ordering, per-product folders, category images, or Drive-file
+cleanup. Preserve backward compatibility while implementing those remaining
+requirements.
 
 Target storage: the owner's **personal Gmail Google Drive (My Drive)**.
 
