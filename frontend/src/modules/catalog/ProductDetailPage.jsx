@@ -7,6 +7,7 @@ import { StockLabel } from './StockLabel.jsx';
 import { Button } from '@/components/Button.jsx';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States.jsx';
 import { formatRupiah } from '@/lib/format';
+import ProductImage from '@/components/ProductImage.jsx';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -44,11 +45,7 @@ export default function ProductDetailPage() {
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
         <div className="overflow-hidden rounded-3xl bg-paper">
           <div className="aspect-square">
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-ink-soft">Foto produk belum tersedia</div>
-            )}
+            <ProductImage src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
           </div>
         </div>
 
