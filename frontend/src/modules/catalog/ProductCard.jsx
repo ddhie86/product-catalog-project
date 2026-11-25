@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { formatRupiah } from '@/lib/format';
 import { StockLabel } from './StockLabel.jsx';
+import ProductImage from '@/components/ProductImage.jsx';
 
 export default function ProductCard({ product }) {
   return (
@@ -12,16 +13,12 @@ export default function ProductCard({ product }) {
         className="relative block overflow-hidden rounded-2xl bg-paper"
       >
         <div className="aspect-[4/4.5] overflow-hidden">
-          {product.image_url ? (
-            <img
-              src={product.image_url}
-              alt={product.name}
-              loading="lazy"
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-sm text-ink-soft">Foto produk belum tersedia</div>
-          )}
+          <ProductImage
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          />
         </div>
         <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-ink opacity-100 shadow-sm transition sm:translate-y-2 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
           Lihat detail →
