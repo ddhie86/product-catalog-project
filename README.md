@@ -17,6 +17,8 @@ internal/
     auth/                # Admin authentication, users, roles, permissions (RBAC)
     product/             # Product/category management, public catalog, ProductServiceContract
     transaction/         # Checkout, webhooks, transaction list, reports
+    contact/             # Public contact form, message storage, support email forwarding
+    activity/            # Admin activity snapshots and audit log
     payment/             # Payment gateway contract (domain only)
     notification/        # Async email worker (goroutine and channel)
       └─ Each module: delivery/http · domain · repository · usecase
@@ -32,7 +34,7 @@ does not directly access the product repository or tables.
 ## Run locally
 
 ```bash
-cp .env.example .env            # Set DB_PASSWORD, JWT_SECRET, SEED_ADMIN_PASSWORD, and XENDIT_* before use
+cp .env.example .env            # Set DB_PASSWORD, JWT_SECRET, SUPPORT_EMAIL, SEED_ADMIN_PASSWORD, and XENDIT_* before use
 make up                         # Start PostgreSQL and Mailpit
 make tidy                       # Update Go module dependencies and go.sum
 make migrate-up                 # Requires the golang-migrate CLI
@@ -73,8 +75,16 @@ frontend is not the security boundary.
 | GET | `/api/v1/categories` | – |
 | POST | `/api/v1/checkout` | – |
 | POST | `/api/v1/payments/webhook` (`X-Callback-Token`) | Gateway token |
+| POST | `/api/v1/contact-us` | – |
+| GET | `/api/v1/admin/contact-messages` | `contact_messages:view` |
+| POST | `/api/v1/admin/contact-messages/:id/reply` | `contact_messages:reply` |
+| GET | `/api/v1/admin/activity-logs` | `activity_logs:view` |
 
 `sort` options: `newest` (default), `price_asc`, `price_desc`, and `popular`.
+Contact messages (`name`, `email`, `type`, and `message`) are saved to
+`contact_message` and forwarded through SMTP to `SUPPORT_EMAIL`.
+Successful admin changes to products, categories, users, roles, and contact-message
+replies are recorded in `activity_log` with before/after snapshots.
 
 ### Admin roles
 

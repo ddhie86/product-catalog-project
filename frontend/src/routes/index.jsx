@@ -15,6 +15,7 @@ import CheckoutPage from '@/modules/checkout/CheckoutPage.jsx';
 import PaymentRedirect from '@/modules/checkout/PaymentRedirect.jsx';
 import PaymentSuccessPage from '@/modules/checkout/PaymentSuccessPage.jsx';
 import LoginPage from '@/modules/auth/pages/LoginPage.jsx';
+import ContactUsPage from '@/modules/contact/ContactUsPage.jsx';
 
 // Halaman admin dipisah ke chunk sendiri; konsumen tidak ikut mengunduhnya.
 const DashboardPage = lazy(() => import('@/modules/admin-dashboard/DashboardPage.jsx'));
@@ -23,6 +24,8 @@ const AdminCategoryList = lazy(() => import('@/modules/admin-categories/AdminCat
 const AdminUserList = lazy(() => import('@/modules/admin-users/AdminUserList.jsx'));
 const AdminRoleList = lazy(() => import('@/modules/admin-roles/AdminRoleList.jsx'));
 const TransactionListPage = lazy(() => import('@/modules/transactions/TransactionListPage.jsx'));
+const ContactMessageListPage = lazy(() => import('@/modules/admin-contact-messages/ContactMessageListPage.jsx'));
+const ActivityLogPage = lazy(() => import('@/modules/admin-activity-logs/ActivityLogPage.jsx'));
 
 function AdminHome() {
   const { hasPermission } = useAuth();
@@ -33,6 +36,8 @@ function AdminHome() {
     ['transactions:view', '/admin/transactions'],
     ['users:view', '/admin/users'],
     ['roles:view', '/admin/roles'],
+    ['contact_messages:view', '/admin/contact-messages'],
+    ['activity_logs:view', '/admin/activity-logs'],
   ].find(([permission]) => hasPermission(permission));
   return <Navigate to={firstAllowed?.[1] ?? '/admin/no-access'} replace />;
 }
@@ -61,6 +66,7 @@ export default function AppRoutes() {
           <Route path="checkout" element={<CheckoutPage />} />
           <Route path="payment/redirect" element={<PaymentRedirect />} />
           <Route path="payment/success" element={<PaymentSuccessPage />} />
+          <Route path="contact-us" element={<ContactUsPage />} />
         </Route>
 
         {/* Admin */}
@@ -74,6 +80,8 @@ export default function AppRoutes() {
             <Route path="users" element={<RequirePermission permission="users:view"><AdminUserList /></RequirePermission>} />
             <Route path="roles" element={<RequirePermission permission="roles:view"><AdminRoleList /></RequirePermission>} />
             <Route path="transactions" element={<RequirePermission permission="transactions:view"><TransactionListPage /></RequirePermission>} />
+            <Route path="contact-messages" element={<RequirePermission permission="contact_messages:view"><ContactMessageListPage /></RequirePermission>} />
+            <Route path="activity-logs" element={<RequirePermission permission="activity_logs:view"><ActivityLogPage /></RequirePermission>} />
           </Route>
         </Route>
 

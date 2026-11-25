@@ -4,6 +4,7 @@ package config
 
 import (
 	"fmt"
+	"net/mail"
 	"os"
 	"strconv"
 	"strings"
@@ -24,11 +25,12 @@ type Config struct {
 	XenditCallbackToken string
 	PaymentRedirectURL  string
 
-	SMTPHost string
-	SMTPPort int
-	SMTPUser string
-	SMTPPass string
-	SMTPFrom string
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPass     string
+	SMTPFrom     string
+	SupportEmail string
 
 	LowStockThreshold int
 	EmailQueueSize    int
@@ -76,6 +78,7 @@ func Load() (*Config, error) {
 		SMTPUser:            os.Getenv("SMTP_USER"),
 		SMTPPass:            os.Getenv("SMTP_PASS"),
 		SMTPFrom:            get("SMTP_FROM", "no-reply@catalog.local"),
+		SupportEmail:        strings.TrimSpace(os.Getenv("SUPPORT_EMAIL")),
 		LowStockThreshold:   getInt("LOW_STOCK_THRESHOLD", 5),
 		EmailQueueSize:      getInt("EMAIL_QUEUE_SIZE", 256),
 	}
@@ -84,6 +87,13 @@ func Load() (*Config, error) {
 	}
 	if len(cfg.JWTSecret) < 16 {
 		return nil, fmt.Errorf("JWT_SECRET must be at least 16 characters")
+	}
+	if cfg.SupportEmail == "" {
+		return nil, fmt.Errorf("SUPPORT_EMAIL is required")
+	}
+	supportEmail, err := mail.ParseAddress(cfg.SupportEmail)
+	if err != nil || supportEmail.Address != cfg.SupportEmail {
+		return nil, fmt.Errorf("SUPPORT_EMAIL must be a valid email address")
 	}
 	return cfg, nil
 }

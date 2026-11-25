@@ -10,6 +10,8 @@ const nav = [
   { to: '/admin/transactions', label: 'Transaksi', permission: 'transactions:view' },
   { to: '/admin/users', label: 'Pengguna admin', permission: 'users:view' },
   { to: '/admin/roles', label: 'Role', permission: 'roles:view' },
+  { to: '/admin/contact-messages', label: 'Pesan kontak', permission: 'contact_messages:view' },
+  { to: '/admin/activity-logs', label: 'Log aktivitas', permission: 'activity_logs:view' },
 ];
 
 export default function AdminLayout() {

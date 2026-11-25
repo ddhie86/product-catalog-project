@@ -1,30 +1,30 @@
 // Copyright (c) 2026 Dedy Setiawan. All rights reserved.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { fetchCatalogProducts, fetchCategories } from './services/catalogApi';
 import ProductCard from './ProductCard.jsx';
 import { Button } from '@/components/Button.jsx';
 import { SelectField } from '@/components/FormFields.jsx';
 import { Pagination } from '@/components/Pagination.jsx';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States.jsx';
 import { SORT_OPTIONS } from '@/lib/constants';
+import { fetchCatalogProducts, fetchCategories } from './services/catalogApi';
 
 const PAGE_SIZE = 12;
 
 export default function CatalogPage() {
-  // Filter disimpan di URL agar hasil pencarian bisa dibagikan & tombol back berfungsi.
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
   const category = searchParams.get('category') ?? '';
   const sort = searchParams.get('sort') ?? 'newest';
   const page = Number(searchParams.get('page') ?? 1) || 1;
-
   const [searchInput, setSearchInput] = useState(q);
+
+  useEffect(() => setSearchInput(q), [q]);
 
   const update = (patch) => {
     const next = new URLSearchParams(searchParams);
-    Object.entries({ page: 1, ...patch }).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
+    Object.entries({ page: 1, ...patch }).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)));
     if (next.get('page') === '1') next.delete('page');
     setSearchParams(next);
   };
@@ -35,58 +35,90 @@ export default function CatalogPage() {
     placeholderData: keepPreviousData,
   });
   const categories = useQuery({ queryKey: ['categories'], queryFn: fetchCategories, staleTime: 5 * 60_000 });
-
   const items = products.data?.data ?? [];
+  const categoryItems = categories.data ?? [];
 
   return (
-    <div className="grid gap-8 md:grid-cols-[14rem_1fr]">
-      <aside className="space-y-6">
-        <form
-          role="search"
-          onSubmit={(e) => {
-            e.preventDefault();
-            update({ q: searchInput.trim() });
-          }}
-          className="space-y-2"
-        >
-          <label htmlFor="catalog-search" className="block text-sm font-medium">
-            Cari produk
-          </label>
-          <input
-            id="catalog-search"
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Nama atau kata kunci"
-            className="block w-full rounded-md border border-line bg-white px-3 py-2 text-sm"
-          />
-          <Button type="submit" className="w-full">
-            Cari
-          </Button>
-        </form>
+    <div className="space-y-12 sm:space-y-16">
+      <section className="relative isolate overflow-hidden rounded-3xl bg-paper px-6 py-10 sm:px-10 sm:py-14 lg:px-14">
+        <div aria-hidden="true" className="absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full bg-brand/10 blur-3xl" />
+        <div aria-hidden="true" className="absolute bottom-[-7rem] right-1/4 -z-10 h-64 w-64 rounded-full bg-slate-400/15 blur-3xl" />
+        <div className="max-w-2xl">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand">Pilihan terbaik untuk Anda</p>
+          <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
+            Temukan produk yang tepat untuk <span className="text-brand">setiap kebutuhan.</span>
+          </h1>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-ink-soft sm:text-base">
+            Jelajahi koleksi pilihan kami, temukan produk favorit, dan nikmati pengalaman belanja yang praktis.
+          </p>
+          <form
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              update({ q: searchInput.trim() });
+            }}
+            className="mt-7 flex max-w-xl items-center gap-2 rounded-xl border border-line bg-white p-2 shadow-sm focus-within:border-brand"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="ml-2 h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.2 4.2" />
+            </svg>
+            <input
+              id="catalog-search"
+              type="search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Cari produk yang Anda inginkan..."
+              aria-label="Cari produk"
+              className="min-w-0 flex-1 border-0 bg-transparent px-1 py-2 text-sm text-ink outline-none placeholder:text-ink-soft/70 focus:ring-0"
+            />
+            <Button type="submit" className="rounded-lg px-5">Cari</Button>
+          </form>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-ink-soft">
+            <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-ok" /> Pilihan produk berkualitas</span>
+            <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-brand" /> Belanja mudah dan praktis</span>
+          </div>
+        </div>
+      </section>
 
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium">Kategori</legend>
-          <div className="space-y-1 text-sm">
-            <label className="flex items-center gap-2">
-              <input type="radio" name="category" checked={category === ''} onChange={() => update({ category: '' })} />
-              Semua kategori
-            </label>
-            {(categories.data ?? []).map((c) => (
-              <label key={c.id} className="flex items-center gap-2">
-                <input type="radio" name="category" checked={category === c.id} onChange={() => update({ category: c.id })} />
-                {c.name}
-              </label>
+      {categoryItems.length > 0 && (
+        <section id="categories" className="scroll-mt-28">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-ink">Kategori produk</h2>
+            <span className="text-xs text-ink-soft">{categoryItems.length} kategori</span>
+          </div>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2" aria-label="Filter kategori">
+            <button
+              type="button"
+              onClick={() => update({ category: '' })}
+              aria-pressed={category === ''}
+              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition ${category === '' ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}
+            >
+              Semua
+            </button>
+            {categoryItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => update({ category: item.id })}
+                aria-pressed={category === item.id}
+                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition ${category === item.id ? 'bg-ink text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}
+              >
+                {item.name}
+              </button>
             ))}
           </div>
-        </fieldset>
-      </aside>
+        </section>
+      )}
 
-      <section aria-live="polite">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-          <h1 className="text-2xl font-semibold">Katalog produk</h1>
-          <div className="w-48">
-            <SelectField label="Urutkan" value={sort} onChange={(e) => update({ sort: e.target.value })} options={SORT_OPTIONS} />
+      <section id="catalog" className="scroll-mt-28">
+        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Koleksi kami</p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink">Jelajahi semua produk</h2>
+            <p className="mt-1 text-sm text-ink-soft">Temukan pilihan yang sesuai dengan kebutuhan Anda.</p>
+          </div>
+          <div className="w-full sm:w-52">
+            <SelectField label="Urutkan produk" value={sort} onChange={(event) => update({ sort: event.target.value })} options={SORT_OPTIONS} />
           </div>
         </div>
 
@@ -94,31 +126,36 @@ export default function CatalogPage() {
         {products.isError && <ErrorState error={products.error} onRetry={products.refetch} />}
         {products.isSuccess && items.length === 0 && (
           <EmptyState
-            title="Produk tidak ditemukan"
-            description="Coba kata kunci lain atau hapus filter kategori."
-            action={
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setSearchInput('');
-                  setSearchParams({});
-                }}
-              >
-                Hapus semua filter
-              </Button>
-            }
+            title="Produk belum ditemukan"
+            description="Coba kata kunci lain atau pilih kategori yang berbeda."
+            action={<Button variant="secondary" onClick={() => { setSearchInput(''); setSearchParams({}); }}>Hapus semua filter</Button>}
           />
         )}
         {items.length > 0 && (
-          <ul className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            {items.map((p) => (
-              <li key={p.id}>
-                <ProductCard product={p} />
-              </li>
-            ))}
-          </ul>
+          <>
+            <div aria-live="polite" className="mb-4 flex items-center justify-between text-xs text-ink-soft">
+              <span>{products.data?.meta?.total_items ?? items.length} produk ditemukan</span>
+              {products.isFetching && <span>Memperbarui...</span>}
+            </div>
+            <ul className="flex flex-wrap justify-start gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-9">
+              {items.map((product) => (
+                <li key={product.id} className="w-[calc(50%-6px)] max-w-[280px] xl:w-[calc(25%-15px)]">
+                  <ProductCard product={product} />
+                </li>
+              ))}
+            </ul>
+          </>
         )}
-        <Pagination meta={products.data?.meta} onPageChange={(p) => update({ page: p })} />
+        <Pagination meta={products.data?.meta} onPageChange={(nextPage) => update({ page: nextPage })} />
+      </section>
+
+      <section className="overflow-hidden rounded-3xl bg-ink px-6 py-8 text-white sm:flex sm:items-center sm:justify-between sm:px-10">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">Temukan favorit Anda</p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight">Pilihan tepat, belanja lebih mudah.</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">Jelajahi katalog kami dan temukan produk yang paling sesuai untuk Anda.</p>
+        </div>
+        <a href="#catalog" className="mt-5 inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:bg-blue-50 sm:mt-0">Jelajahi produk <span className="ml-2">→</span></a>
       </section>
     </div>
   );

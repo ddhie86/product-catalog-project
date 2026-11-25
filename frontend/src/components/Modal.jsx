@@ -4,18 +4,20 @@ import { useEffect, useId, useRef } from 'react';
 export function Modal({ open, title, onClose, children }) {
   const titleId = useId();
   const panelRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return undefined;
     const previouslyFocused = document.activeElement;
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    const onKey = (e) => e.key === 'Escape' && onCloseRef.current();
     document.addEventListener('keydown', onKey);
     panelRef.current?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (
