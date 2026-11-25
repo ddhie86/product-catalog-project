@@ -12,14 +12,40 @@
 1. Enable the Google Drive API in a Google Cloud project.
 2. Configure the OAuth consent screen for the Gmail account that owns the
    images, and create an OAuth client for the local authorization helper.
-3. Put `GOOGLE_DRIVE_OAUTH_CLIENT_ID` and
-   `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET` in the backend's untracked `.env`.
-4. Run `make google-drive-auth` and open its printed URL in the target Gmail
-   account. The helper requests the narrow `drive.file` scope, creates or
-   reuses the `Product Catalog Project` folder, and prints a refresh token and
-   root folder ID.
-5. Store those values in `.env` as `GOOGLE_DRIVE_REFRESH_TOKEN` and
+3. **Store the downloaded `credentials.json` outside the Git repository.**
+   On macOS, a suitable location is
+   `~/.config/product-catalog/credentials.json`. Create the directory with
+   owner-only access and restrict the file permissions:
+   ```bash
+   mkdir -p ~/.config/product-catalog
+   chmod 700 ~/.config/product-catalog
+   # Move the downloaded file to this location, then:
+   chmod 600 ~/.config/product-catalog/credentials.json
+   ```
+   Do not place this file under the repository (including `backend/`,
+   `frontend/public/`, or `frontend/src/`), in a publicly served directory,
+   or in a published build, Docker image, or GitHub repository. Do not upload
+   it to a public file-sharing location.
+4. The current `cmd/google-drive-auth` helper does **not** read
+   `credentials.json` directly. Extract the OAuth Client ID and Client Secret
+   from that file and put them in the backend's untracked `.env` as
+   `GOOGLE_DRIVE_OAUTH_CLIENT_ID` and
+   `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`. Keep `.env` outside version control.
+5. Run `make google-drive-auth` with those environment variables loaded and
+   open its printed URL in the target Gmail account. The helper requests the
+   narrow `drive.file` scope, creates or reuses the `Product Catalog Project`
+   folder, and prints a refresh token and root folder ID.
+6. Store those values in `.env` as `GOOGLE_DRIVE_REFRESH_TOKEN` and
    `GOOGLE_DRIVE_ROOT_FOLDER_ID`, then restart the API.
+
+For a local shell session, load `.env` before running the helper or API:
+
+```bash
+set -a
+source .env
+set +a
+make google-drive-auth
+```
 
 The backend creates or reuses `product-images/products` beneath the configured
 root folder when the first upload occurs. Uploads accept JPEG, PNG, and WebP
@@ -32,6 +58,13 @@ traffic. Replacing or clearing an image URL does not delete the old Drive file.
 If the Drive OAuth settings are empty, the service starts without Drive and the
 image-upload endpoint responds with `503 image storage is not configured`.
 Never commit `.env`, OAuth client secrets, refresh tokens, or credential JSON.
+Add a defensive ignore rule such as `credentials.json` and
+`*credentials*.json` to the repository's `.gitignore`; this is a backup
+safeguard, not a substitute for keeping secrets outside the repository.
+If a credential file or token is accidentally committed or exposed, revoke or
+rotate the affected OAuth credential/token in Google Cloud/Google Account
+security settings; deleting the file in a later commit does not remove it from
+Git history.
 
 ## Scope
 
@@ -53,7 +86,10 @@ Target storage: the owner's **personal Gmail Google Drive (My Drive)**.
 
 Use **Google OAuth 2.0 on behalf of the personal Gmail owner** for My Drive uploads.
 
-Do not assume a Service Account can own files in a personal My Drive. Service Accounts do not have ordinary consumer Drive storage quota and cannot own files in the same way as a user. A Service Account is a better fit for a Google Workspace Shared Drive, not this personal-Gmail prototype.
+Do not assume a Service Account can own files in a personal My Drive. Service
+Accounts do not have ordinary consumer Drive storage quota and cannot own
+files in the same way as a user. A Service Account is a better fit for a Google
+Workspace Shared Drive, not this personal-Gmail prototype.
 
 One-time setup:
 1. Create/select a Google Cloud project.
